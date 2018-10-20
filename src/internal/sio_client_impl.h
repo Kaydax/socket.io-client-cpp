@@ -83,6 +83,7 @@ namespace sio
         virtual void sync_close()=0;
         virtual bool opened() const=0;
         virtual std::string const& get_sessionid() const=0;
+        virtual void log(const char* fmt, ...) = 0;
         virtual void set_reconnect_attempts(unsigned attempts)=0;
         virtual void set_reconnect_delay(unsigned millis)=0;
         virtual void set_reconnect_delay_max(unsigned millis)=0;
@@ -178,7 +179,7 @@ namespace sio
         void set_reconnect_delay(unsigned millis) {m_reconn_delay = millis;if(m_reconn_delay_max<millis) m_reconn_delay_max = millis;}
 
         void set_reconnect_delay_max(unsigned millis) {m_reconn_delay_max = millis;if(m_reconn_delay>millis) m_reconn_delay = millis;}
-
+        void log(const char* fmt, ...);
         void set_logs_default();
 
         void set_logs_quiet();
@@ -199,7 +200,7 @@ namespace sio
     private:
         void run_loop();
 
-        void connect_impl(const std::string& uri, const std::string& query);
+        void connect_impl();
 
         void close_impl(close::status::value const& code,std::string const& reason);
         
