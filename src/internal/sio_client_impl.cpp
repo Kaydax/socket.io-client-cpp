@@ -12,12 +12,6 @@
 #include <chrono>
 #include <mutex>
 #include <cmath>
-// Comment this out to disable handshake logging to stdout
-#if DEBUG || _DEBUG
-#define LOG(x) std::cout << x
-#else
-#define LOG(x)
-#endif
 
 #if SIO_TLS
 // If using Asio's SSL support, you will also need to add this #include.
@@ -253,8 +247,7 @@ namespace sio
             lib::error_code ec;
             client_type::connection_ptr con = m_client.get_connection(ss.str(), ec);
             if (ec) {
-                m_client.get_alog().write(websocketpp::log::alevel::app,
-                                          "Get Connection Error: "+ec.message());
+                log("Get Connection Error: %s", ec.message().c_str());
                 break;
             }
 
@@ -274,7 +267,7 @@ namespace sio
 
     void client_impl::close_impl(close::status::value const& code,string const& reason)
     {
-        LOG("Close by reason:"<<reason << endl);
+        log("Close by reason: %d", reason.c_str());
         if(m_reconn_timer)
         {
             m_reconn_timer->cancel();
@@ -282,7 +275,7 @@ namespace sio
         }
         if (m_con.expired())
         {
-            cerr << "Error: No active session" << endl;
+            log("Error: No active session");
         }
         else
         {
@@ -299,7 +292,7 @@ namespace sio
             m_client.send(m_con,*payload_ptr,opcode,ec);
             if(ec)
             {
-                cerr<<"Send failed,reason:"<< ec.message()<<endl;
+                log("Send failed,reason: %d", ec.message().c_str());
             }
         }
     }
@@ -309,7 +302,7 @@ namespace sio
         if(ec || m_con.expired())
         {
             if (ec != asio::error::operation_aborted)
-                LOG("ping exit,con is expired?"<<m_con.expired()<<",ec:"<<ec.message()<<endl);
+                log("ping exit,con %s, ec: %s", m_con.expired()?"expired":"", ec.message().c_str());
             return;
         }
         packet p(packet::frame_ping);
@@ -333,7 +326,7 @@ namespace sio
         {
             return;
         }
-        LOG("Pong timeout"<<endl);
+        log("Pong timeout");
         m_client.get_io_service().dispatch(std::bind(&client_impl::close_impl, this,close::status::policy_violation,"Pong timeout"));
     }
 
@@ -348,7 +341,7 @@ namespace sio
             m_con_state = con_opening;
             m_reconn_made++;
             this->reset_states();
-            LOG("Reconnecting..."<<endl);
+            log("Reconnecting...");
             if(m_reconnecting_listener) m_reconnecting_listener();
             m_client.get_io_service().dispatch(std::bind(&client_impl::connect_impl,this,m_base_url,m_query_string));
         }
@@ -390,7 +383,7 @@ namespace sio
     void client_impl::on_fail(connection_hdl)
     {
         if (m_con_state == con_closing) {
-            LOG("Connection failed while closing." << endl);
+            log("Connection failed while closing.");
             this->close();
             return;
         }
@@ -398,10 +391,10 @@ namespace sio
         m_con.reset();
         m_con_state = con_closed;
         this->sockets_invoke_void(&sio::socket::on_disconnect);
-        LOG("Connection failed." << endl);
+        log("Connection failed.");
         if(m_reconn_made<m_reconn_attempts)
         {
-            LOG("Reconnect for attempt:"<<m_reconn_made<<endl);
+            log("Reconnect for attempt: %d", m_reconn_made);
             unsigned delay = this->next_delay();
             if(m_reconnect_listener) m_reconnect_listener(m_reconn_made,delay);
             m_reconn_timer.reset(new asio::steady_timer(m_client.get_io_service()));
@@ -418,12 +411,12 @@ namespace sio
     void client_impl::on_open(connection_hdl con)
     {
         if (m_con_state == con_closing) {
-            LOG("Connection opened while closing." << endl);
+            log("Connection opened while closing.");
             this->close();
             return;
         }
 
-        LOG("Connected." << endl);
+        log("Connected.");
         m_con_state = con_opened;
         m_con = con;
         m_reconn_made = 0;
@@ -434,14 +427,14 @@ namespace sio
     
     void client_impl::on_close(connection_hdl con)
     {
-        LOG("Client Disconnected." << endl);
+        log("Client Disconnected.");
         con_state m_con_state_was = m_con_state;
         m_con_state = con_closed;
         lib::error_code ec;
         close::status::value code = close::status::normal;
         client_type::connection_ptr conn_ptr  = m_client.get_con_from_hdl(con, ec);
         if (ec) {
-            LOG("OnClose get conn failed"<<ec<<endl);
+            log("OnClose get conn failed: %d", ec.value());
         }
         else
         {
@@ -465,7 +458,7 @@ namespace sio
             this->sockets_invoke_void(&sio::socket::on_disconnect);
             if(m_reconn_made<m_reconn_attempts)
             {
-                LOG("Reconnect for attempt:"<<m_reconn_made<<endl);
+                log("Reconnect for attempt: %d", m_reconn_made);
                 unsigned delay = this->next_delay();
                 if(m_reconnect_listener) m_reconnect_listener(m_reconn_made,delay);
                 m_reconn_timer.reset(new asio::steady_timer(m_client.get_io_service()));
@@ -576,13 +569,13 @@ failed:
     
     void client_impl::on_encode(bool isBinary,shared_ptr<const string> const& payload)
     {
-        LOG("encoded payload length:"<<payload->length()<<endl);
+        log("encoded payload length: %d", payload->length());
         m_client.get_io_service().dispatch(std::bind(&client_impl::send_impl,this,payload,isBinary?frame::opcode::binary:frame::opcode::text));
     }
     
     void client_impl::clear_timers()
     {
-        LOG("clear timers"<<endl);
+        log("clear timers");
         asio::error_code ec;
         if(m_ping_timeout_timer)
         {
@@ -607,7 +600,7 @@ failed:
                              asio::ssl::context::single_dh_use,ec);
         if(ec)
         {
-            cerr<<"Init tls failed,reason:"<< ec.message()<<endl;
+            log("Init tls failed,reason:%s", ec.message().c_str());
         }
         
         return ctx;

@@ -8,12 +8,6 @@
 #include <cstdarg>
 #include <functional>
 
-#if DEBUG || _DEBUG
-#define LOG(x) std::cout << x
-#else
-#define LOG(x)
-#endif
-
 #define NULL_GUARD(_x_)  \
     if(_x_ == NULL) return
 
@@ -108,8 +102,8 @@ namespace sio
     {
     public:
         
-			socket_impl(client_impl *,std::string const&);
-      ~socket_impl();
+        socket_impl(client_impl *,std::string const&);
+        ~socket_impl();
         
         void on(std::string const& event_name,event_listener_aux const& func);
         
@@ -372,21 +366,21 @@ namespace sio
             // Connect open
             case packet::type_connect:
             {
-                LOG("Received Message type (Connect)"<<std::endl);
+                m_client->log("Received Message type (Connect)");
 
                 this->on_connected();
                 break;
             }
             case packet::type_disconnect:
             {
-                LOG("Received Message type (Disconnect)"<<std::endl);
+                m_client->log("Received Message type (Disconnect)");
                 this->on_close();
                 break;
             }
             case packet::type_event:
             case packet::type_binary_event:
             {
-                LOG("Received Message type (Event)"<<std::endl);
+                m_client->log("Received Message type (Event)");
                 const message::ptr ptr = p.get_message();
                 if(ptr->get_flag() == message::flag_array)
                 {
@@ -409,7 +403,7 @@ namespace sio
             case packet::type_ack:
             case packet::type_binary_ack:
             {
-                LOG("Received Message type (ACK)"<<std::endl);
+                m_client->log("Received Message type (ACK)");
                 const message::ptr ptr = p.get_message();
                 if(ptr->get_flag() == message::flag_array)
                 {
@@ -425,7 +419,7 @@ namespace sio
                 // Error
             case packet::type_error:
             {
-                LOG("Received Message type (ERROR)"<<std::endl);
+                m_client->log("Received Message type (ERROR)");
                 this->on_socketio_error(p.get_message());
                 break;
             }
@@ -481,7 +475,7 @@ namespace sio
             return;
         }
         m_connection_timer.reset();
-        LOG("Connection timeout,close socket."<<std::endl);
+        m_client->log("Connection timeout,close socket.");
         //Should close socket if no connected message arrive.Otherwise we'll never ask for open again.
         this->on_close();
     }

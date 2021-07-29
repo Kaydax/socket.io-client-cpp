@@ -47,9 +47,9 @@ typedef websocketpp::config::asio_client client_config;
 namespace sio
 {
     using namespace websocketpp;
-		class socket_impl;
     typedef websocketpp::client<client_config> client_type;
-    
+    class socket_impl;
+
     class client_impl : public client {
         
     public:
@@ -124,7 +124,15 @@ namespace sio
         void set_reconnect_delay_max(unsigned millis) {m_reconn_delay_max = millis;if(m_reconn_delay>millis) m_reconn_delay = millis;}
 
         void set_logs_level(LogLevel level);
-
+        void log(const char* fmt, ...)
+        {
+            char line[1024];
+            va_list vl;
+            va_start(vl, fmt);
+            vsnprintf(line, sizeof(line) - 1, fmt, vl);
+            m_client.get_alog().write(websocketpp::log::alevel::app, line);
+            va_end(vl);
+        }
     protected:
         void send(packet& p);
         
