@@ -169,21 +169,22 @@ namespace sio
             m_network_thread.reset();
         }
     }
+
 		template<typename client_type>
-    void client_impl<client_type>::set_logs_default()
+    void client_impl<client_type>::set_logs_level(client::LogLevel level)
     {
-        m_client.clear_access_channels(websocketpp::log::alevel::all);
-        m_client.set_access_channels(websocketpp::log::alevel::connect | websocketpp::log::alevel::disconnect | websocketpp::log::alevel::app);
-    }
-		template<typename client_type>
-    void client_impl<client_type>::set_logs_quiet()
-    {
-        m_client.clear_access_channels(websocketpp::log::alevel::all);
-    }
-		template<typename client_type>
-    void client_impl<client_type>::set_logs_verbose()
-    {
-        m_client.set_access_channels(websocketpp::log::alevel::all);
+			m_client.clear_access_channels(websocketpp::log::alevel::all);
+			switch (level)
+			{
+			case client::log_default:
+				m_client.set_access_channels(websocketpp::log::alevel::connect | websocketpp::log::alevel::disconnect | websocketpp::log::alevel::app);
+				break;
+			case client::log_quiet:
+				break;
+			case client::log_verbose:
+				m_client.set_access_channels(websocketpp::log::alevel::all);
+				break;
+			}
     }
 
     /*************************protected:*************************/

@@ -143,19 +143,9 @@ namespace sio
         m_impl->set_reconnect_delay_max(millis);
     }
 
-    void client::set_logs_default()
+    void client::set_logs_level(LogLevel level)
     {
-        m_impl->set_logs_default();
-    }
-
-    void client::set_logs_quiet()
-    {
-        m_impl->set_logs_quiet();
-    }
-
-    void client::set_logs_verbose()
-    {
-        m_impl->set_logs_verbose();
+        m_impl->set_logs_level(level);
     }
 
 }

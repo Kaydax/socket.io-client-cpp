@@ -22,7 +22,12 @@ namespace sio
             close_reason_normal,
             close_reason_drop
         };
-        
+				enum LogLevel
+				{
+					log_default,
+					log_quiet,
+					log_verbose
+				};
         typedef std::function<void(void)> con_listener;
         
         typedef std::function<void(close_reason const& reason)> close_listener;
@@ -80,11 +85,7 @@ namespace sio
 
         void set_reconnect_delay_max(unsigned millis);
 
-        void set_logs_default();
-
-        void set_logs_quiet();
-
-        void set_logs_verbose();
+        void set_logs_level(LogLevel level);
 
         sio::socket::ptr const& socket(const std::string& nsp = "");
         

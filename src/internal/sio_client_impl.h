@@ -95,9 +95,7 @@ namespace sio
         virtual void on_socket_closed(std::string const& nsp)=0;
         virtual void on_socket_opened(std::string const& nsp)=0;
 				
-				virtual void set_logs_default() = 0;
-				virtual void set_logs_quiet() = 0;
-				virtual void set_logs_verbose() = 0;
+				virtual void set_logs_level(client::LogLevel level) = 0;
 
         // used for selecting whether or not to use TLS
         static bool is_tls(const std::string& uri);
@@ -180,11 +178,7 @@ namespace sio
 
         void set_reconnect_delay_max(unsigned millis) {m_reconn_delay_max = millis;if(m_reconn_delay>millis) m_reconn_delay = millis;}
         void log(const char* fmt, ...);
-        void set_logs_default();
-
-        void set_logs_quiet();
-
-        void set_logs_verbose();
+				void set_logs_level(client::LogLevel level);
 
     public:
         void send(packet& p);
