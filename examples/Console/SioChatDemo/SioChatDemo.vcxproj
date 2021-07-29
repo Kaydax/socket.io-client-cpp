@@ -61,7 +61,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libeay32.lib;ssleay32.lib</AdditionalDependencies>
+      <AdditionalDependencies>libeay32.lib;ssleay32.lib;socket.io.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -79,21 +80,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libeay32.lib;ssleay32.lib</AdditionalDependencies>
+      <AdditionalDependencies>libeay32.lib;ssleay32.lib;socket.io.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\src\internal\sio_client_impl.h" />
-    <ClInclude Include="..\..\..\src\internal\sio_packet.h" />
-    <ClInclude Include="..\..\..\src\sio_client.h" />
-    <ClInclude Include="..\..\..\src\sio_message.h" />
-    <ClInclude Include="..\..\..\src\sio_socket.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\src\internal\sio_client_impl.cpp" />
-    <ClCompile Include="..\..\..\src\internal\sio_packet.cpp" />
-    <ClCompile Include="..\..\..\src\sio_client.cpp" />
-    <ClCompile Include="..\..\..\src\sio_socket.cpp" />
     <ClCompile Include="..\main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
