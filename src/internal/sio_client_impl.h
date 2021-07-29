@@ -47,12 +47,12 @@ typedef websocketpp::config::asio_client client_config;
 namespace sio
 {
     using namespace websocketpp;
-    
+		class socket_impl;
     typedef websocketpp::client<client_config> client_type;
     
-    class client_impl {
+    class client_impl : public client {
         
-    protected:
+    public:
         enum con_state
         {
             con_opening,
@@ -61,7 +61,7 @@ namespace sio
             con_closed
         };
         
-        client_impl();
+        client_impl(const std::string& url);
         
         ~client_impl();
         
@@ -103,7 +103,7 @@ namespace sio
         }
         
         // Client Functions - such as send, etc.
-        void connect(const std::string& uri, const std::map<std::string, std::string>& queryString,
+        void connect(const std::map<std::string, std::string>& queryString,
                      const std::map<std::string, std::string>& httpExtraHeaders);
         
         sio::socket::ptr const& socket(const std::string& nsp);
@@ -117,17 +117,13 @@ namespace sio
         
         std::string const& get_sessionid() const { return m_sid; }
 
-        void set_reconnect_attempts(unsigned attempts) {m_reconn_attempts = attempts;}
+        void set_reconnect_attempts(int attempts) {m_reconn_attempts = attempts;}
 
         void set_reconnect_delay(unsigned millis) {m_reconn_delay = millis;if(m_reconn_delay_max<millis) m_reconn_delay_max = millis;}
 
         void set_reconnect_delay_max(unsigned millis) {m_reconn_delay_max = millis;if(m_reconn_delay>millis) m_reconn_delay = millis;}
 
-        void set_logs_default();
-
-        void set_logs_quiet();
-
-        void set_logs_verbose();
+        void set_logs_level(LogLevel level);
 
     protected:
         void send(packet& p);
@@ -213,16 +209,16 @@ namespace sio
         
         con_state m_con_state;
         
-        client::con_listener m_open_listener;
-        client::con_listener m_fail_listener;
-        client::con_listener m_reconnecting_listener;
-        client::reconnect_listener m_reconnect_listener;
-        client::close_listener m_close_listener;
+        con_listener m_open_listener;
+        con_listener m_fail_listener;
+        con_listener m_reconnecting_listener;
+        reconnect_listener m_reconnect_listener;
+        close_listener m_close_listener;
         
-        client::socket_listener m_socket_open_listener;
-        client::socket_listener m_socket_close_listener;
+        socket_listener m_socket_open_listener;
+        socket_listener m_socket_close_listener;
         
-        std::map<const std::string,socket::ptr> m_sockets;
+        std::map<const std::string, socket::ptr> m_sockets;
         
         std::mutex m_socket_mutex;
 
@@ -235,7 +231,7 @@ namespace sio
         unsigned m_reconn_made;
         
         friend class sio::client;
-        friend class sio::socket;
+        friend class sio::socket_impl;
     };
 }
 #endif // SIO_CLIENT_IMPL_H

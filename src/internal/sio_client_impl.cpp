@@ -31,7 +31,7 @@ using namespace std;
 namespace sio
 {
     /*************************public:*************************/
-    client_impl::client_impl() :
+    client_impl::client_impl(const std::string& url) :
         m_ping_interval(0),
         m_ping_timeout(0),
         m_network_thread(),
@@ -41,6 +41,7 @@ namespace sio
         m_reconn_attempts(0xFFFFFFFF),
         m_reconn_made(0)
     {
+				m_base_url = url;
         using websocketpp::log::alevel;
 #ifndef DEBUG
         m_client.clear_access_channels(alevel::all);
@@ -70,7 +71,7 @@ namespace sio
         sync_close();
     }
     
-    void client_impl::connect(const string& uri, const map<string,string>& query, const map<string, string>& headers)
+    void client_impl::connect(const map<string,string>& query, const map<string, string>& headers)
     {
         if(m_reconn_timer)
         {
@@ -94,7 +95,6 @@ namespace sio
             }
         }
         m_con_state = con_opening;
-        m_base_url = uri;
         m_reconn_made = 0;
 
         string query_str;
@@ -110,7 +110,7 @@ namespace sio
         m_http_headers = headers;
 
         this->reset_states();
-        m_client.get_io_service().dispatch(std::bind(&client_impl::connect_impl,this,uri,m_query_string));
+        m_client.get_io_service().dispatch(std::bind(&client_impl::connect_impl,this,m_base_url,m_query_string));
         m_network_thread.reset(new thread(std::bind(&client_impl::run_loop,this)));//uri lifecycle?
 
     }
@@ -140,7 +140,7 @@ namespace sio
         }
         else
         {
-            pair<const string, socket::ptr> p(aux,shared_ptr<sio::socket>(new sio::socket(this,aux)));
+            pair<const string, socket::ptr> p(aux, sio::socket::create(this,aux));
             return (m_sockets.insert(p).first)->second;
         }
     }
@@ -164,23 +164,25 @@ namespace sio
         }
     }
 
-    void client_impl::set_logs_default()
-    {
-        m_client.clear_access_channels(websocketpp::log::alevel::all);
-        m_client.set_access_channels(websocketpp::log::alevel::connect | websocketpp::log::alevel::disconnect | websocketpp::log::alevel::app);
-    }
+		void client_impl::set_logs_level(LogLevel level)
+		{
+			m_client.clear_access_channels(websocketpp::log::alevel::all);
+			switch (level)
+			{
+			default:
+				break;
+			case client::log_default:
+				m_client.set_access_channels(websocketpp::log::alevel::connect | websocketpp::log::alevel::disconnect | websocketpp::log::alevel::app);
+				break;
+			case client::log_quiet:
+				break;
+			case client::log_verbose:
+				m_client.set_access_channels(websocketpp::log::alevel::all);
+				break;
+			}
+		}
 
-    void client_impl::set_logs_quiet()
-    {
-        m_client.clear_access_channels(websocketpp::log::alevel::all);
-    }
-
-    void client_impl::set_logs_verbose()
-    {
-        m_client.set_access_channels(websocketpp::log::alevel::all);
-    }
-
-    /*************************protected:*************************/
+		/*************************protected:*************************/
     void client_impl::send(packet& p)
     {
         m_packet_mgr.encode(p);
