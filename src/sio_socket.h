@@ -6,7 +6,7 @@ namespace sio
 {
     class event_adapter;
 
-    class event
+    class SIO_API event
     {
     public:
         const std::string& get_nsp() const;
@@ -43,7 +43,7 @@ namespace sio
     class packet;
 
     //The name 'socket' is taken from concept of official socket.io.
-    class socket
+    class SIO_API socket
     {
     public:
         typedef std::function<void(const std::string& name, message::ptr const& message, bool need_ack, message::list& ack_message)> event_listener_aux;
