@@ -12,9 +12,23 @@
 #include <map>
 #include <cassert>
 #include <type_traits>
+#ifdef SIO_DLL
+#ifdef _WIN32
+#ifdef SIO_EXPORT
+#define SIO_API __declspec(dllexport)
+#else
+#define SIO_API __declspec(dllimport)
+#endif
+#else
+#define SIO_API __attribute__((visibility("default")))
+#endif
+#else
+#define SIO_API
+#endif
+
 namespace sio
 {
-    class message
+    class SIO_API message
     {
     public:
         enum flag
@@ -112,7 +126,7 @@ namespace sio
         message(flag f):_flag(f){}
     };
 
-    class null_message : public message
+    class SIO_API null_message : public message
     {
     protected:
         null_message()
@@ -127,7 +141,7 @@ namespace sio
         }
     };
 
-    class bool_message : public message
+    class SIO_API bool_message : public message
     {
         bool _v;
 
@@ -149,7 +163,7 @@ namespace sio
         }
     };
 
-    class int_message : public message
+    class SIO_API int_message : public message
     {
         int64_t _v;
     protected:
@@ -175,7 +189,7 @@ namespace sio
         }
     };
 
-    class double_message : public message
+    class SIO_API double_message : public message
     {
         double _v;
         double_message(double v)
@@ -195,7 +209,7 @@ namespace sio
         }
     };
 
-    class string_message : public message
+    class SIO_API string_message : public message
     {
         std::string _v;
         string_message(std::string const& v)
@@ -224,7 +238,7 @@ namespace sio
         }
     };
 
-    class binary_message : public message
+    class SIO_API binary_message : public message
     {
         std::shared_ptr<const std::string> _v;
         binary_message(std::shared_ptr<const std::string> const& v)
@@ -243,7 +257,7 @@ namespace sio
         }
     };
 
-    class array_message : public message
+    class SIO_API array_message : public message
     {
         std::vector<message::ptr> _v;
         array_message():message(flag_array)
@@ -337,7 +351,7 @@ namespace sio
         }
     };
 
-    class object_message : public message
+    class SIO_API object_message : public message
     {
         std::map<std::string,message::ptr> _v;
         object_message() : message(flag_object)
@@ -411,7 +425,7 @@ namespace sio
         }
     };
 
-    class message::list
+    class SIO_API message::list
     {
     public:
         list()

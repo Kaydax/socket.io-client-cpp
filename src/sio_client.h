@@ -15,7 +15,7 @@ namespace sio
 {
     class client_base;
     
-    class client {
+    class SIO_API client {
     public:
         enum close_reason
         {
