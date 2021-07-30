@@ -51,7 +51,7 @@ namespace sio
     typedef websocketpp::client<client_config_tls> client_type_tls;
 #endif
 
-    class client_impl_base {
+    class client_base {
 		public:
         enum con_state
         {
@@ -61,8 +61,8 @@ namespace sio
             con_closed
         };
 
-        client_impl_base() {}
-        virtual ~client_impl_base() {}
+        client_base() {}
+        virtual ~client_base() {}
 
         // listeners and event bindings. (see SYNTHESIS_SETTER below)
         virtual void set_open_listener(client::con_listener const&)=0;
@@ -94,8 +94,7 @@ namespace sio
         virtual asio::io_service& get_io_service()=0;
         virtual void on_socket_closed(std::string const& nsp)=0;
         virtual void on_socket_opened(std::string const& nsp)=0;
-				
-				virtual void set_logs_level(client::LogLevel level) = 0;
+        virtual void set_logs_level(client::LogLevel level) = 0;
 
         // used for selecting whether or not to use TLS
         static bool is_tls(const std::string& uri);
@@ -111,7 +110,7 @@ namespace sio
     };
 
     template<typename client_type>
-    class client_impl: public client_impl_base {
+    class client_impl: public client_base {
     public:
         typedef typename client_type::message_ptr message_ptr;
 

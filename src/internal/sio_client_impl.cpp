@@ -663,7 +663,7 @@ failed:
 #ifdef WIN32
 #define strcasecmp _stricmp 
 #endif
-    bool client_impl_base::is_tls(const string& uri)
+    bool client_base::is_tls(const string& uri)
     {
         websocketpp::uri uo(uri);
         if(!strcasecmp(uo.get_scheme().c_str(),"http") || !strcasecmp(uo.get_scheme().c_str(),"ws"))
@@ -683,11 +683,11 @@ failed:
     }
 
     socket*
-    client_impl_base::new_socket(const string& nsp)
+    client_base::new_socket(const string& nsp)
     { return new sio::socket(this, nsp); }
 
     void
-    client_impl_base::socket_on_message_packet(socket::ptr& s, const packet& p)
+    client_base::socket_on_message_packet(socket::ptr& s, const packet& p)
     { s->on_message_packet(p); }
 
     template class client_impl<client_type_no_tls>;

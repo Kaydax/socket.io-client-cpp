@@ -19,7 +19,7 @@ namespace sio
 
     client::client(const std::string& uri)
     {
-        if(!client_impl_base::is_tls(uri))
+        if(!client_base::is_tls(uri))
         {
             m_impl = new client_impl<client_type_no_tls>(uri);
         }

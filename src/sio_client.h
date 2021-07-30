@@ -13,7 +13,7 @@
 
 namespace sio
 {
-    class client_impl_base;
+    class client_base;
     
     class client {
     public:
@@ -22,12 +22,13 @@ namespace sio
             close_reason_normal,
             close_reason_drop
         };
-				enum LogLevel
-				{
-					log_default,
-					log_quiet,
-					log_verbose
-				};
+        enum LogLevel
+        {
+            log_default,
+            log_quiet,
+            log_verbose
+        };
+
         typedef std::function<void(void)> con_listener;
         
         typedef std::function<void(close_reason const& reason)> close_listener;
@@ -103,7 +104,7 @@ namespace sio
         client(client const&){}
         void operator=(client const&){}
         
-        client_impl_base* m_impl;
+        client_base* m_impl;
     };
     
 }
