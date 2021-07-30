@@ -111,13 +111,22 @@ namespace sio
 
     public:
         static bool is_tls(const string& uri);
-        virtual void send(packet& p) = 0;
-        virtual asio::io_service& get_io_service() = 0;
+        // Percent encode query string
+        static std::string encode_query_string(const std::string &query);
 
-        virtual void on_socket_closed(std::string const& nsp) = 0;
-        virtual void on_socket_opened(std::string const& nsp) = 0;
-        virtual void remove_socket(std::string const& nsp) = 0;
+        virtual void send(packet& p) = 0;
+        asio::io_service& get_io_service() { return *io_service; }
         virtual void log(const char* fmt, ...) = 0;
+
+        virtual void on_socket_closed(std::string const& nsp);
+        virtual void on_socket_opened(std::string const& nsp);
+        virtual void remove_socket(std::string const& nsp);
+
+        sio::socket::ptr const& socket(const std::string& nsp);
+        socket::ptr get_socket_locked(std::string const& nsp);
+    protected:
+        void sockets_invoke_void(void (sio::socket::*fn)(void));
+
     protected:
         // Wrap protected member functions of sio::socket because only client_impl_base is friended.
         void socket_on_message_packet(sio::socket::ptr s, packet const& p) { s->on_message_packet(p); }
@@ -143,6 +152,10 @@ namespace sio
         unsigned m_reconn_delay_max = 25000;
         unsigned m_reconn_attempts = 0xFFFFFFFF;
         unsigned m_reconn_made = 0;
+
+        std::unique_ptr<asio::io_service> io_service;
+        std::map<const std::string, socket::ptr> m_sockets;
+        std::mutex m_socket_mutex;
     };
 
     template<typename client_type>
@@ -160,7 +173,6 @@ namespace sio
         void connect(const std::map<std::string, std::string>& queryString,
                      const std::map<std::string, std::string>& httpExtraHeaders);
         
-        sio::socket::ptr const& socket(const std::string& nsp);
         
         // Closes the connection
         void close();
@@ -172,15 +184,7 @@ namespace sio
 
     public:
         void send(packet& p);
-        
-        void remove_socket(std::string const& nsp);
-        
-        asio::io_service& get_io_service();
-        
-        void on_socket_closed(std::string const& nsp);
-        
-        void on_socket_opened(std::string const& nsp);
-        
+                       
     private:
         void run_loop();
 
@@ -198,13 +202,9 @@ namespace sio
 
         unsigned next_delay() const;
 
-        socket::ptr get_socket_locked(std::string const& nsp);
-        
-        void sockets_invoke_void(void (sio::socket::*fn)(void));
         
         void on_decode(packet const& pack);
         void on_encode(bool isBinary,shared_ptr<const string> const& payload);
-        
         //websocket callbacks
         void on_fail(connection_hdl con);
 
@@ -222,9 +222,7 @@ namespace sio
         void reset_states();
 
         void clear_timers();
-        
-        // Percent encode query string
-        std::string encode_query_string(const std::string &query);
+       
 
         // Connection pointer for client functions.
         connection_hdl m_con;
@@ -246,15 +244,10 @@ namespace sio
 
         std::unique_ptr<asio::steady_timer> m_reconn_timer;
         
-        
-        std::map<const std::string,socket::ptr> m_sockets;
-        
-        std::mutex m_socket_mutex;
-        
-        
-        friend class sio::client;
-        friend class sio::socket;
     };
+
 }
 #endif // SIO_CLIENT_IMPL_H
+
+
 
