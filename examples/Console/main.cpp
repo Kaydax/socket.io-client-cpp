@@ -104,14 +104,14 @@ void bind_events()
 
 MAIN_FUNC
 {
-
-    sio::client h;
+    auto it = sio::client::create("http://127.0.0.1:3000");
+    sio::client& h = *it;
     connection_listener l(h);
     
     h.set_open_listener(std::bind(&connection_listener::on_connected, &l));
     h.set_close_listener(std::bind(&connection_listener::on_close, &l,std::placeholders::_1));
     h.set_fail_listener(std::bind(&connection_listener::on_fail, &l));
-    h.connect("http://127.0.0.1:3000");
+    h.connect();
     _lock.lock();
     if(!connect_finish)
     {

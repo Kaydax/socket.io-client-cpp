@@ -12,140 +12,24 @@ using std::stringstream;
 
 namespace sio
 {
-    client::client():
-        m_impl(new client_impl<client_type_no_tls>())
-    {
-    }
 
-    client::client(const std::string& uri)
+    client::ptr client::create(const std::string& uri)
     {
-        if(!client_base::is_tls(uri))
-        {
-            m_impl = new client_impl<client_type_no_tls>(uri);
+        if (client_base::is_tls(uri)) {
+            return shared_ptr<client>(new client_impl<client_type_tls>(uri));
         }
-#if SIO_TLS
-        else
-        {
-            m_impl = new client_impl<client_type_tls>(uri);
+        else {
+            return shared_ptr<client>(new client_impl<client_type_no_tls>(uri));
         }
-#endif
     }
 
     client::~client()
     {
-        delete m_impl;
-    }
-    
-    void client::set_open_listener(con_listener const& l)
-    {
-        m_impl->set_open_listener(l);
-    }
-    
-    void client::set_fail_listener(con_listener const& l)
-    {
-        m_impl->set_fail_listener(l);
-    }
-    
-    void client::set_close_listener(close_listener const& l)
-    {
-        m_impl->set_close_listener(l);
-    }
-    
-    void client::set_socket_open_listener(socket_listener const& l)
-    {
-        m_impl->set_socket_open_listener(l);
-    }
-    
-    void client::set_reconnect_listener(reconnect_listener const& l)
-    {
-        m_impl->set_reconnect_listener(l);
     }
 
-    void client::set_reconnecting_listener(con_listener const& l)
+    client::client()
     {
-        m_impl->set_reconnecting_listener(l);
-    }
 
-    void client::set_socket_close_listener(socket_listener const& l)
-    {
-        m_impl->set_socket_close_listener(l);
-    }
-    
-    void client::clear_con_listeners()
-    {
-        m_impl->clear_con_listeners();
-    }
-    
-    void client::clear_socket_listeners()
-    {
-        m_impl->clear_socket_listeners();
-    }
-
-    void client::connect()
-    {
-        m_impl->connect(std::string(), {}, {});
-    }
-
-    void client::connect(const std::string& uri)
-    {
-        m_impl->connect(uri, {}, {});
-    }
-
-    void client::connect(const std::string& uri, const std::map<string,string>& query)
-    {
-        m_impl->connect(uri, query, {});
-    }
-
-    void client::connect(const std::string& uri, const std::map<std::string,std::string>& query,
-                         const std::map<std::string,std::string>& http_extra_headers)
-    {
-        m_impl->connect(uri, query, http_extra_headers);
-    }
-    
-    socket::ptr const& client::socket(const std::string& nsp)
-    {
-        return m_impl->socket(nsp);
-    }
-    
-    // Closes the connection
-    void client::close()
-    {
-        m_impl->close();
-    }
-    
-    void client::sync_close()
-    {
-        m_impl->sync_close();
-    }
-    
-    bool client::opened() const
-    {
-        return m_impl->opened();
-    }
-    
-    std::string const& client::get_sessionid() const
-    {
-        return m_impl->get_sessionid();
-    }
-
-    void client::set_reconnect_attempts(int attempts)
-    {
-        m_impl->set_reconnect_attempts(attempts);
-    }
-
-    void client::set_reconnect_delay(unsigned millis)
-    {
-        m_impl->set_reconnect_delay(millis);
-    }
-
-    void client::set_reconnect_delay_max(unsigned millis)
-    {
-        m_impl->set_reconnect_delay_max(millis);
-    }
-
-    void client::set_logs_level(LogLevel level)
-    {
-        m_impl->set_logs_level(level);
     }
 
 }

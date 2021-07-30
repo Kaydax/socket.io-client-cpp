@@ -13,8 +13,7 @@
 
 namespace sio
 {
-    class client_base;
-    
+
     class SIO_API client {
     public:
         enum close_reason
@@ -22,91 +21,75 @@ namespace sio
             close_reason_normal,
             close_reason_drop
         };
+
+        typedef std::function<void(void)> con_listener;
+
+        typedef std::function<void(close_reason const& reason)> close_listener;
+
+        typedef std::function<void(unsigned, unsigned)> reconnect_listener;
+
+        typedef std::function<void(std::string const& nsp)> socket_listener;
+
+        typedef std::shared_ptr<client> ptr;
+        static ptr create(const std::string& uri);
+        virtual ~client();
+
+        //set listeners and event bindings.
+        virtual void set_open_listener(con_listener const& l) = 0;
+
+        virtual void set_fail_listener(con_listener const& l) = 0;
+
+        virtual void set_reconnecting_listener(con_listener const& l) = 0;
+
+        virtual void set_reconnect_listener(reconnect_listener const& l) = 0;
+
+        virtual void set_close_listener(close_listener const& l) = 0;
+
+        virtual void set_socket_open_listener(socket_listener const& l) = 0;
+
+        virtual void set_socket_close_listener(socket_listener const& l) = 0;
+
+        virtual void clear_con_listeners() = 0;
+
+        virtual void clear_socket_listeners() = 0;
+
+        // Client Functions - such as send, etc.
+        virtual void connect(const std::map<std::string, std::string>& query = {},
+            const std::map<std::string, std::string>& http_extra_headers = {}) = 0;
+
+        virtual void set_reconnect_attempts(int attempts) = 0;
+
+        virtual void set_reconnect_delay(unsigned millis) = 0;
+
+        virtual void set_reconnect_delay_max(unsigned millis) = 0;
+
         enum LogLevel
         {
             log_default,
             log_quiet,
             log_verbose
         };
+        virtual void set_logs_level(LogLevel level) = 0;
 
-        typedef std::function<void(void)> con_listener;
-        
-        typedef std::function<void(close_reason const& reason)> close_listener;
+        virtual sio::socket::ptr const& socket(const std::string& nsp = "") = 0;
 
-        typedef std::function<void(unsigned, unsigned)> reconnect_listener;
-        
-        typedef std::function<void(std::string const& nsp)> socket_listener;
-
-        // The default constructor builds a TLS-only or a non-TLS client depending
-        // on which library you link with.
-        client();
-
-        // This version of the constructor takes a given connection URI and selects
-        // TLS or non-TLS as needed. If building the library without SIO_TLS support,
-        // you may only use http:// or ws:// schemes, or an exception is thrown.
-        // When using this constructor, you may later call connect() without passing
-        // the URI again. If you pass another URI later to connect() it must have the
-        // same scheme as the one given here, or an exception will be raised.
-        client(const std::string& uri);
-
-        ~client();
-        
-        //set listeners and event bindings.
-        void set_open_listener(con_listener const& l);
-        
-        void set_fail_listener(con_listener const& l);
-        
-        void set_reconnecting_listener(con_listener const& l);
-
-        void set_reconnect_listener(reconnect_listener const& l);
-
-        void set_close_listener(close_listener const& l);
-        
-        void set_socket_open_listener(socket_listener const& l);
-        
-        void set_socket_close_listener(socket_listener const& l);
-        
-        void clear_con_listeners();
-        
-        void clear_socket_listeners();
-        
-        // Client Functions - such as send, etc.
-        void connect();
-
-        void connect(const std::string& uri);
-
-        void connect(const std::string& uri, const std::map<std::string,std::string>& query);
-
-        void connect(const std::string& uri, const std::map<std::string,std::string>& query,
-                     const std::map<std::string,std::string>& http_extra_headers);
-
-        void set_reconnect_attempts(int attempts);
-
-        void set_reconnect_delay(unsigned millis);
-
-        void set_reconnect_delay_max(unsigned millis);
-
-        void set_logs_level(LogLevel level);
-
-        sio::socket::ptr const& socket(const std::string& nsp = "");
-        
         // Closes the connection
-        void close();
-        
-        void sync_close();
-        
-        bool opened() const;
-        
-        std::string const& get_sessionid() const;
-        
+        virtual void close() = 0;
+
+        virtual void sync_close() = 0;
+
+        virtual bool opened() const = 0;
+
+        virtual std::string const& get_sessionid() const = 0;
+
+    protected:
+        client();
     private:
         //disable copy constructor and assign operator.
-        client(client const&){}
-        void operator=(client const&){}
-        
-        client_base* m_impl;
+        client(client const&) {}
+        void operator=(client const&) {}
     };
-    
+
 }
 
 

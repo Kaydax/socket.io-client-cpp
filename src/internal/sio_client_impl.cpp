@@ -27,15 +27,7 @@ namespace sio
     /*************************public:*************************/
     template<typename client_type>
     client_impl<client_type>::client_impl(const string& uri) :
-        m_base_url(uri),
-        m_con_state(con_closed),
-        m_ping_interval(0),
-        m_ping_timeout(0),
-        m_network_thread(),
-        m_reconn_delay(5000),
-        m_reconn_delay_max(25000),
-        m_reconn_attempts(0xFFFFFFFF),
-        m_reconn_made(0)
+        m_base_url(uri)
     {
         using websocketpp::log::alevel;
 #ifndef DEBUG
@@ -64,7 +56,7 @@ namespace sio
     }
 
     template<typename client_type>
-    void sio::client_impl<client_type>::log(const char* fmt, ...)
+    void client_impl<client_type>::log(const char* fmt, ...)
     {
         char line[1024];
         va_list vl;
@@ -75,7 +67,7 @@ namespace sio
     }
 
     template<typename client_type>
-    void client_impl<client_type>::connect(const string& uri, const map<string,string>& query, const map<string, string>& headers)
+    void client_impl<client_type>::connect(const map<string,string>& query, const map<string, string>& headers)
     {
         if(m_reconn_timer)
         {
@@ -100,10 +92,6 @@ namespace sio
         }
         m_con_state = con_opening;
         m_reconn_made = 0;
-        if(!uri.empty())
-        {
-        m_base_url = uri;
-        }
 
         string query_str;
         for(map<string,string>::const_iterator it=query.begin();it!=query.end();++it){
@@ -144,7 +132,7 @@ namespace sio
         }
         else
         {
-            pair<const string, socket::ptr> p(aux,shared_ptr<sio::socket>(new_socket(aux)));
+            pair<const string, socket::ptr> p(aux, create_socket(aux));
             return (m_sockets.insert(p).first)->second;
         }
     }
@@ -170,7 +158,7 @@ namespace sio
         }
     }
 
-		template<typename client_type>
+    template<typename client_type>
     void client_impl<client_type>::set_logs_level(client::LogLevel level)
     {
 			m_client.clear_access_channels(websocketpp::log::alevel::all);
@@ -681,14 +669,6 @@ failed:
             throw std::runtime_error("unsupported URI scheme");
         }
     }
-
-    socket*
-    client_base::new_socket(const string& nsp)
-    { return new sio::socket(this, nsp); }
-
-    void
-    client_base::socket_on_message_packet(socket::ptr& s, const packet& p)
-    { s->on_message_packet(p); }
 
     template class client_impl<client_type_no_tls>;
 #if SIO_TLS

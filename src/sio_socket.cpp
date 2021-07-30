@@ -98,12 +98,12 @@ namespace sio
         return m_ack_message;
     }
     
-    class socket::impl
+    class socket_impl : public socket
     {
     public:
         
-        impl(client_base *,std::string const&);
-        ~impl();
+        socket_impl(client_base *,std::string const&);
+        ~socket_impl();
         
         void on(std::string const& event_name,event_listener_aux const& func);
         
@@ -185,18 +185,18 @@ namespace sio
         friend class socket;
     };
     
-    void socket::impl::on(std::string const& event_name,event_listener_aux const& func)
+    void socket_impl::on(std::string const& event_name, event_listener_aux const& func)
     {
         this->on(event_name,event_adapter::do_adapt(func));
     }
     
-    void socket::impl::on(std::string const& event_name,event_listener const& func)
+    void socket_impl::on(std::string const& event_name,event_listener const& func)
     {
         std::lock_guard<std::mutex> guard(m_event_mutex);
         m_event_binding[event_name] = func;
     }
     
-    void socket::impl::off(std::string const& event_name)
+    void socket_impl::off(std::string const& event_name)
     {
         std::lock_guard<std::mutex> guard(m_event_mutex);
         auto it = m_event_binding.find(event_name);
@@ -206,23 +206,23 @@ namespace sio
         }
     }
     
-    void socket::impl::off_all()
+    void socket_impl::off_all()
     {
         std::lock_guard<std::mutex> guard(m_event_mutex);
         m_event_binding.clear();
     }
     
-    void socket::impl::on_error(error_listener const& l)
+    void socket_impl::on_error(error_listener const& l)
     {
         m_error_listener = l;
     }
     
-    void socket::impl::off_error()
+    void socket_impl::off_error()
     {
         m_error_listener = nullptr;
     }
     
-    socket::impl::impl(client_base* client, std::string const& nsp):
+    socket_impl::socket_impl(client_base* client,std::string const& nsp):
         m_client(client),
         m_connected(false),
         m_nsp(nsp)
@@ -234,14 +234,14 @@ namespace sio
         }
     }
     
-    socket::impl::~impl()
+    socket_impl::~socket_impl()
     {
         
     }
     
-    unsigned int socket::impl::s_global_event_id = 1;
+    unsigned int socket_impl::s_global_event_id = 1;
     
-    void socket::impl::emit(std::string const& name, message::list const& msglist, std::function<void (message::list const&)> const& ack)
+    void socket_impl::emit(std::string const& name, message::list const& msglist, std::function<void (message::list const&)> const& ack)
     {
         NULL_GUARD(m_client);
         message::ptr msg_ptr = msglist.to_array_message(name);
@@ -260,7 +260,7 @@ namespace sio
         send_packet(p);
     }
     
-    void socket::impl::send_connect()
+    void socket_impl::send_connect()
     {
         NULL_GUARD(m_client);
         packet p(packet::type_connect,m_nsp);
@@ -268,10 +268,10 @@ namespace sio
         m_connection_timer.reset(new asio::steady_timer(m_client->get_io_service()));
         asio::error_code ec;
         m_connection_timer->expires_from_now(std::chrono::milliseconds(20000), ec);
-        m_connection_timer->async_wait(std::bind(&socket::impl::timeout_connection,this, std::placeholders::_1));
+        m_connection_timer->async_wait(std::bind(&socket_impl::timeout_connection,this, std::placeholders::_1));
     }
     
-    void socket::impl::close()
+    void socket_impl::close()
     {
         NULL_GUARD(m_client);
         if(m_connected)
@@ -285,11 +285,11 @@ namespace sio
             }
             asio::error_code ec;
             m_connection_timer->expires_from_now(std::chrono::milliseconds(3000), ec);
-            m_connection_timer->async_wait(std::bind(&socket::impl::on_close, this));
+            m_connection_timer->async_wait(std::bind(&socket_impl::on_close, this));
         }
     }
     
-    void socket::impl::on_connected()
+    void socket_impl::on_connected()
     {
         if(m_connection_timer)
         {
@@ -316,10 +316,10 @@ namespace sio
         }
     }
     
-    void socket::impl::on_close()
+    void socket_impl::on_close()
     {
         NULL_GUARD(m_client);
-        sio::client_base *client = m_client;
+        auto client = m_client;
         m_client = NULL;
 
         if(m_connection_timer)
@@ -338,12 +338,12 @@ namespace sio
         client->remove_socket(m_nsp);
     }
     
-    void socket::impl::on_open()
+    void socket_impl::on_open()
     {
         send_connect();
     }
     
-    void socket::impl::on_disconnect()
+    void socket_impl::on_disconnect()
     {
         NULL_GUARD(m_client);
         if(m_connected)
@@ -356,7 +356,7 @@ namespace sio
         }
     }
     
-    void socket::impl::on_message_packet(packet const& p)
+    void socket_impl::on_message_packet(packet const& p)
     {
         NULL_GUARD(m_client);
         if(p.get_nsp() == m_nsp)
@@ -429,7 +429,7 @@ namespace sio
         }
     }
     
-    void socket::impl::on_socketio_event(const std::string& nsp,int msgId,const std::string& name, message::list && message)
+    void socket_impl::on_socketio_event(const std::string& nsp,int msgId,const std::string& name, message::list && message)
     {
         bool needAck = msgId >= 0;
         event ev = event_adapter::create_event(nsp,name, std::move(message),needAck);
@@ -441,13 +441,13 @@ namespace sio
         }
     }
     
-    void socket::impl::ack(int msgId, const string &, const message::list &ack_message)
+    void socket_impl::ack(int msgId, const string &, const message::list &ack_message)
     {
         packet p(m_nsp, ack_message.to_array_message(),msgId,true);
         send_packet(p);
     }
     
-    void socket::impl::on_socketio_ack(int msgId, message::list const& message)
+    void socket_impl::on_socketio_ack(int msgId, message::list const& message)
     {
         std::function<void (message::list const&)> l;
         {
@@ -462,12 +462,12 @@ namespace sio
         if(l)l(message);
     }
     
-    void socket::impl::on_socketio_error(message::ptr const& err_message)
+    void socket_impl::on_socketio_error(message::ptr const& err_message)
     {
         if(m_error_listener)m_error_listener(err_message);
     }
     
-    void socket::impl::timeout_connection(const asio::error_code &ec)
+    void socket_impl::timeout_connection(const asio::error_code &ec)
     {
         NULL_GUARD(m_client);
         if(ec)
@@ -480,7 +480,7 @@ namespace sio
         this->on_close();
     }
     
-    void socket::impl::send_packet(sio::packet &p)
+    void socket_impl::send_packet(sio::packet &p)
     {
         NULL_GUARD(m_client);
         if(m_connected)
@@ -506,7 +506,7 @@ namespace sio
         }
     }
     
-    socket::event_listener socket::impl::get_bind_listener_locked(const string &event)
+    socket::event_listener socket_impl::get_bind_listener_locked(const string &event)
     {
         std::lock_guard<std::mutex> guard(m_event_mutex);
         auto it = m_event_binding.find(event);
@@ -517,87 +517,13 @@ namespace sio
         return socket::event_listener();
     }
     
-    socket::socket(client_base* client,std::string const& nsp):
-        m_impl(new impl(client,nsp))
-    {
-    }
-    
     socket::~socket()
     {
-        delete m_impl;
     }
-    
-    void socket::on(std::string const& event_name,event_listener const& func)
+ 
+    socket::ptr socket::create(client_base* client, std::string const& nsp)
     {
-        m_impl->on(event_name, func);
-    }
-    
-    void socket::on(std::string const& event_name,event_listener_aux const& func)
-    {
-        m_impl->on(event_name, func);
-    }
-    
-    void socket::off(std::string const& event_name)
-    {
-        m_impl->off(event_name);
-    }
-    
-    void socket::off_all()
-    {
-        m_impl->off_all();
-    }
-    
-    void socket::close()
-    {
-        m_impl->close();
-    }
-    
-    void socket::on_error(error_listener const& l)
-    {
-        m_impl->on_error(l);
-    }
-    
-    void socket::off_error()
-    {
-        m_impl->off_error();
+        return std::make_shared<socket_impl>(client, nsp);
     }
 
-    void socket::emit(std::string const& name, message::list const& msglist, std::function<void (message::list const&)> const& ack)
-    {
-        m_impl->emit(name, msglist,ack);
-    }
-    
-    std::string const& socket::get_namespace() const
-    {
-        return m_impl->get_namespace();
-    }
-    
-    void socket::on_connected()
-    {
-        m_impl->on_connected();
-    }
-    
-    void socket::on_close()
-    {
-        m_impl->on_close();
-    }
-    
-    void socket::on_open()
-    {
-        m_impl->on_open();
-    }
-    
-    void socket::on_message_packet(packet const& p)
-    {
-        m_impl->on_message_packet(p);
-    }
-    
-    void socket::on_disconnect()
-    {
-        m_impl->on_disconnect();
-    }
 }
-
-
-
-
