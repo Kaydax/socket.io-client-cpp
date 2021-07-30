@@ -12,6 +12,7 @@
 #include <chrono>
 #include <mutex>
 #include <cmath>
+#include <stdarg.h>
 
 #if SIO_TLS
 // If using Asio's SSL support, you will also need to add this #include.

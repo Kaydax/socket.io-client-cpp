@@ -15,12 +15,12 @@ namespace sio
 
     client::ptr client::create(const std::string& uri)
     {
-        if (client_base::is_tls(uri)) {
+#if SIO_TLS
+        if (client_base::is_tls(uri))
             return shared_ptr<client>(new client_impl<client_type_tls>(uri));
-        }
-        else {
+        else
+#endif
             return shared_ptr<client>(new client_impl<client_type_no_tls>(uri));
-        }
     }
 
     client::~client()
