@@ -15,19 +15,17 @@
 #if _DEBUG || DEBUG
 #if SIO_TLS
 #include <websocketpp/config/debug_asio.hpp>
-typedef websocketpp::config::debug_asio_tls client_config;
-#else
+typedef websocketpp::config::debug_asio_tls client_config_tls;
+#endif //SIO_TLS
 #include <websocketpp/config/debug_asio_no_tls.hpp>
 typedef websocketpp::config::debug_asio client_config;
-#endif //SIO_TLS
 #else
 #if SIO_TLS
 #include <websocketpp/config/asio_client.hpp>
-typedef websocketpp::config::asio_tls_client client_config;
-#else
+typedef websocketpp::config::asio_tls_client client_config_tls;
+#endif //SIO_TLS
 #include <websocketpp/config/asio_no_tls_client.hpp>
 typedef websocketpp::config::asio_client client_config;
-#endif //SIO_TLS
 #endif //DEBUG
 
 #if SIO_TLS
@@ -47,7 +45,6 @@ typedef websocketpp::config::asio_client client_config;
 namespace sio
 {
     using namespace websocketpp;
-    typedef websocketpp::client<client_config> client_type;
     class socket_impl;
 
     class client_impl : public client {
@@ -62,9 +59,8 @@ namespace sio
         };
         
         client_impl(const std::string& url);
-        
         ~client_impl();
-        
+
         //set listeners and event bindings.
 #define SYNTHESIS_SETTER(__TYPE__,__FIELD__) \
     void set_##__FIELD__(__TYPE__ const& l) \
@@ -123,36 +119,28 @@ namespace sio
 
         void set_reconnect_delay_max(unsigned millis) {m_reconn_delay_max = millis;if(m_reconn_delay>millis) m_reconn_delay = millis;}
 
-        void set_logs_level(LogLevel level);
-        void log(const char* fmt, ...)
-        {
-            char line[1024];
-            va_list vl;
-            va_start(vl, fmt);
-            vsnprintf(line, sizeof(line) - 1, fmt, vl);
-            m_client.get_alog().write(websocketpp::log::alevel::app, line);
-            va_end(vl);
-        }
+        // void set_logs_level(LogLevel level);
+        virtual void log(const char* fmt, ...) = 0;
+        static bool is_tls(const std::string& uri);
     protected:
         void send(packet& p);
         
         void remove_socket(std::string const& nsp);
         
-        asio::io_service& get_io_service();
-        
         void on_socket_closed(std::string const& nsp);
-        
         void on_socket_opened(std::string const& nsp);
-        
-    private:
+
+        asio::io_service& get_io_service() { return *io_service; }
+        std::unique_ptr<asio::io_service> io_service;
+    protected:
         void run_loop();
 
         void connect_impl(const std::string& uri, const std::string& query);
 
-        void close_impl(close::status::value const& code,std::string const& reason);
-        
-        void send_impl(std::shared_ptr<const std::string> const&  payload_ptr,frame::opcode::value opcode);
-        
+        virtual void close_impl(close::status::value const& code,std::string const& reason)  = 0;
+        virtual void send_impl(std::shared_ptr<const std::string> const&  payload_ptr,frame::opcode::value opcode) = 0;
+        virtual bool ws_connect(const std::string& uri) = 0;
+
         void ping(const asio::error_code& ec);
         
         void timeout_pong(const asio::error_code& ec);
@@ -173,9 +161,9 @@ namespace sio
 
         void on_open(connection_hdl con);
 
-        void on_close(connection_hdl con);
+        void on_close(connection_hdl con, bool normal_close);
 
-        void on_message(connection_hdl con, client_type::message_ptr msg);
+        void on_message(connection_hdl con, const std::string& msg);
 
         //socketio callbacks
         void on_handshake(message::ptr const& message);
@@ -185,19 +173,12 @@ namespace sio
         void reset_states();
 
         void clear_timers();
-        
-        #if SIO_TLS
-        typedef websocketpp::lib::shared_ptr<asio::ssl::context> context_ptr;
-        
-        context_ptr on_tls_init(connection_hdl con);
-        #endif
-        
+                
         // Percent encode query string
         std::string encode_query_string(const std::string &query);
 
         // Connection pointer for client functions.
         connection_hdl m_con;
-        client_type m_client;
         // Socket.IO server settings
         std::string m_sid;
         std::string m_base_url;
@@ -240,6 +221,23 @@ namespace sio
         
         friend class sio::client;
         friend class sio::socket_impl;
+    };
+
+    template <typename config>
+    class client_instance : public client_impl {
+        typedef websocketpp::client<config> client_type;
+        client_type m_client;
+    public:
+        client_instance(const std::string& uri);
+
+        void close_impl(close::status::value const& code, std::string const& reason);
+        void send_impl(std::shared_ptr<const std::string> const&  payload_ptr, frame::opcode::value opcode);
+        void template_init();
+        bool ws_connect(const std::string& uri);
+
+        virtual void set_logs_level(LogLevel level);
+        void log(const char* fmt, ...);
+
     };
 }
 #endif // SIO_CLIENT_IMPL_H

@@ -105,8 +105,9 @@ void bind_events()
 MAIN_FUNC
 {
 
-    auto cli = sio::client::create("http://127.0.0.1:3000");
-		sio::client& h = *cli;
+    auto cli = sio::client::create("http://localhost:3000");
+	sio::client& h = *cli;
+    //h.set_logs_level(client::log_verbose);
     connection_listener l(h);
     
     h.set_open_listener(std::bind(&connection_listener::on_connected, &l));

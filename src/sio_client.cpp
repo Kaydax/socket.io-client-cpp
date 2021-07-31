@@ -12,19 +12,22 @@ using std::stringstream;
 
 namespace sio
 {    
-		client::ptr client::create(const std::string& uri)
-		{
-			return std::make_shared<client_impl>(uri);
-			//return shared_ptr<sio::client>(new client_impl(uri));
-		}
+    client::ptr client::create(const std::string& uri)
+    {
+#if SIO_TLS
+        if (client_impl::is_tls(uri))
+            return client::ptr(new client_instance<client_config_tls>(uri));
+        else
+#endif
+            return client::ptr(new client_instance<client_config>(uri));
+    }
 
-		client::~client()
+    client::~client()
     {
     }
 
-		client::client()
-		{
+    client::client()
+    {
 
-		}
-
+    }
 }
