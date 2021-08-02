@@ -43,7 +43,6 @@ public:
     handler(h)
     {
     }
-    
 
     void on_connected()
     {
@@ -105,7 +104,7 @@ void bind_events()
 MAIN_FUNC
 {
 
-    auto cli = sio::client::create("http://localhost:3000");
+    auto cli = sio::client::create("https://localhost");
 	sio::client& h = *cli;
     //h.set_logs_level(client::log_verbose);
     connection_listener l(h);
@@ -113,6 +112,9 @@ MAIN_FUNC
     h.set_open_listener(std::bind(&connection_listener::on_connected, &l));
     h.set_close_listener(std::bind(&connection_listener::on_close, &l,std::placeholders::_1));
     h.set_fail_listener(std::bind(&connection_listener::on_fail, &l));
+    h.set_http_listener([](int code, const std::map<std::string, std::string>& header, const std::string& body) {
+        std::cout << "httpResp " << code << " body: " << body << std::endl;
+    });
     h.connect();
     _lock.lock();
     if(!connect_finish)

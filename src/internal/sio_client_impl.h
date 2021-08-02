@@ -80,6 +80,8 @@ namespace sio
         
         SYNTHESIS_SETTER(client::socket_listener,socket_close_listener)
         
+        SYNTHESIS_SETTER(client::http_listener, http_listener)
+            
 #undef SYNTHESIS_SETTER
         
         
@@ -139,7 +141,7 @@ namespace sio
 
         virtual void close_impl(close::status::value const& code,std::string const& reason)  = 0;
         virtual void send_impl(std::shared_ptr<const std::string> const&  payload_ptr,frame::opcode::value opcode) = 0;
-        virtual bool ws_connect(const std::string& uri) = 0;
+        virtual bool ws_connect(const std::string& uri, bool http) = 0;
 
         void ping(const asio::error_code& ec);
         
@@ -203,7 +205,8 @@ namespace sio
         con_listener m_reconnecting_listener;
         reconnect_listener m_reconnect_listener;
         close_listener m_close_listener;
-        
+        http_listener m_http_listener;
+
         socket_listener m_socket_open_listener;
         socket_listener m_socket_close_listener;
         
@@ -233,7 +236,7 @@ namespace sio
         void close_impl(close::status::value const& code, std::string const& reason);
         void send_impl(std::shared_ptr<const std::string> const&  payload_ptr, frame::opcode::value opcode);
         void template_init();
-        bool ws_connect(const std::string& uri);
+        bool ws_connect(const std::string& uri, bool http);
 
         virtual void set_logs_level(LogLevel level);
         void log(const char* fmt, ...);

@@ -1,0 +1,55 @@
+ websocketpp/impl/connection_impl.hpp | 34 +++++++++++++++++++++++++++++++---
+ 1 file changed, 31 insertions(+), 3 deletions(-)
+
+diff --git a/websocketpp/impl/connection_impl.hpp b/websocketpp/impl/connection_impl.hpp
+index bf88c95..789a3e9 100644
+--- a/websocketpp/impl/connection_impl.hpp
++++ b/websocketpp/impl/connection_impl.hpp
+@@ -1440,8 +1440,16 @@ void connection<config>::send_http_request() {
+     // selected client version
+     if (m_processor) {
+         lib::error_code ec;
+-        ec = m_processor->client_handshake_request(m_request,m_uri,
+-            m_requested_subprotocols);
++        if(m_is_http){
++            m_request.set_method("GET");
++            m_request.set_uri(m_uri->get_resource());
++            m_request.set_version("HTTP/1.1");
++            m_request.replace_header("Host",m_uri->get_host_port());
++        } 
++        else {
++            ec = m_processor->client_handshake_request(m_request,m_uri,
++                m_requested_subprotocols);    
++        }
+ 
+         if (ec) {
+             log_err(log::elevel::fatal,"Internal library error: Processor",ec);
+@@ -1600,7 +1608,27 @@ void connection<config>::handle_read_http_response(lib::error_code const & ec,
+             m_handshake_timer->cancel();
+             m_handshake_timer.reset();
+         }
+-
++        if(m_is_http) {
++            if(m_response.ready()) {
++                if (m_http_handler)
++                    m_http_handler(m_connection_hdl);
++                this->terminate(make_error_code(error::http_connection_ended));
++            }
++			else {
++				transport_con_type::async_read_at_least(
++                        1,
++                        m_buf,
++                        config::connection_read_buffer_size,
++                        lib::bind(
++                            &type::handle_read_http_response,
++                            type::get_shared(),
++                            lib::placeholders::_1,
++                            lib::placeholders::_2
++                        )
++                    );
++			}
++			return ;
++        }
+         lib::error_code validate_ec = m_processor->validate_server_handshake_response(
+             m_request,
+             m_response

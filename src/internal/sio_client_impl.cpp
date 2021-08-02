@@ -28,6 +28,44 @@ using namespace std;
 
 namespace sio
 {
+    std::string client_impl::encode_query_string(const std::string &query) {
+        ostringstream ss;
+        ss << std::hex;
+        // Percent-encode (RFC3986) non-alphanumeric characters.
+        for (const char c : query) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+                ss << c;
+            }
+            else {
+                ss << '%' << std::uppercase << std::setw(2) << int((unsigned char)c) << std::nouppercase;
+            }
+        }
+        ss << std::dec;
+        return ss.str();
+    }
+
+#ifdef WIN32
+#define strcasecmp _stricmp
+#endif
+    bool client_impl::is_tls(const string& uri)
+    {
+        websocketpp::uri uo(uri);
+        if (!strcasecmp(uo.get_scheme().c_str(), "http") || !strcasecmp(uo.get_scheme().c_str(), "ws"))
+        {
+            return false;
+        }
+#if SIO_TLS
+        else if (!strcasecmp(uo.get_scheme().c_str(), "https") || !strcasecmp(uo.get_scheme().c_str(), "wss"))
+        {
+            return true;
+        }
+#endif
+        else
+        {
+            throw std::runtime_error("unsupported URI scheme");
+        }
+    }
+
     /*************************public:*************************/
     client_impl::client_impl(const std::string& url) :
         m_ping_interval(0),
@@ -61,6 +99,16 @@ namespace sio
         m_client.init_asio(io_service.get());
 
         // Bind the clients we are using
+        m_client.set_http_handler([this](connection_hdl con) {
+            lib::error_code ec;
+            typename client_type::connection_ptr conn_ptr = m_client.get_con_from_hdl(con, ec);
+            if (conn_ptr && m_http_listener) {
+                auto resp = conn_ptr->get_response();
+                //std::cout << conn_ptr->get_response_header("token");
+                std::map<std::string, std::string> headers(resp.get_headers().begin(), resp.get_headers().end());
+                m_http_listener((int)resp.get_status_code(), headers, resp.get_body());
+            }
+        });
         m_client.set_open_handler(std::bind(&client_instance<config>::on_open, this, _1));
         m_client.set_close_handler([this](connection_hdl con) {
             lib::error_code ec;
@@ -109,7 +157,7 @@ namespace sio
 #endif
 
     template<typename config>
-    bool client_instance<config>::ws_connect(const std::string& uri)
+    bool client_instance<config>::ws_connect(const std::string& uri, bool http)
     {
         lib::error_code ec;
         typename client_type::connection_ptr con = m_client.get_connection(uri, ec);
@@ -121,7 +169,7 @@ namespace sio
         for (auto&& header : m_http_headers) {
             con->replace_header(header.first, header.second);
         }
-
+        con->set_http(http);
         m_client.connect(con);
         return true;
     }
@@ -285,8 +333,13 @@ namespace sio
     void client_impl::connect_impl(const string& uri, const string& queryString)
     {
         do{
-            websocketpp::uri uo(uri);
             ostringstream ss;
+            websocketpp::uri uo(uri);
+            if (strcasecmp(uo.get_scheme().substr(0, 2).c_str(), "ws")) {
+                ws_connect(uri, true);
+                return;
+            }
+
             if (is_tls(m_base_url)) {
                 ss << "wss://";
             }
@@ -303,13 +356,13 @@ namespace sio
 
             // If a resource path was included in the URI, use that, otherwise
             // use the default /socket.io/.
-            const std::string path(uo.get_resource() == "/" ? "/socket.io/" : uo.get_resource());
+                const std::string path(uo.get_resource() == "/" ? "/socket.io/" : uo.get_resource());
             ss<<":"<<uo.get_port() << path << "?EIO=4&transport=websocket";
             if(m_sid.size()>0){
                 ss<<"&sid="<<m_sid;
             }
             ss<<"&t="<<time(NULL)<<queryString;
-            ws_connect(ss.str());
+            ws_connect(ss.str(), false);
             return;
         }
         while(0);
@@ -635,43 +688,6 @@ failed:
         io_service->reset();
         m_sid.clear();
         m_packet_mgr.reset();
-    }
-
-    std::string client_impl::encode_query_string(const std::string &query){
-        ostringstream ss;
-        ss << std::hex;
-        // Percent-encode (RFC3986) non-alphanumeric characters.
-        for(const char c : query){
-            if((c >= 'a' && c <= 'z') || (c>= 'A' && c<= 'Z') || (c >= '0' && c<= '9')){
-                ss << c;
-            } else {
-                ss << '%' << std::uppercase << std::setw(2) << int((unsigned char) c) << std::nouppercase;
-            }
-        }
-        ss << std::dec;
-        return ss.str();
-    }
-
-#ifdef WIN32
-#define strcasecmp _stricmp
-#endif
-    bool client_impl::is_tls(const string& uri)
-    {
-        websocketpp::uri uo(uri);
-        if (!strcasecmp(uo.get_scheme().c_str(), "http") || !strcasecmp(uo.get_scheme().c_str(), "ws"))
-        {
-            return false;
-        }
-#if SIO_TLS
-        else if (!strcasecmp(uo.get_scheme().c_str(), "https") || !strcasecmp(uo.get_scheme().c_str(), "wss"))
-        {
-            return true;
-        }
-#endif
-        else
-        {
-            throw std::runtime_error("unsupported URI scheme");
-        }
     }
 
     template class client_instance<client_config>;
