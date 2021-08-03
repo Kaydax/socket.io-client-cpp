@@ -263,7 +263,9 @@ namespace sio
     void socket_impl::send_connect()
     {
         NULL_GUARD(m_client);
-        packet p(packet::type_connect,m_nsp);
+        if (m_nsp == "/")
+            return;
+        packet p(packet::type_connect, m_nsp);
         m_client->send(p);
         m_connection_timer.reset(new asio::steady_timer(m_client->get_io_service()));
         asio::error_code ec;
