@@ -110,7 +110,8 @@ namespace sio
                 auto resp = conn_ptr->get_response();
                 //std::cout << conn_ptr->get_response_header("token");
                 std::map<std::string, std::string> headers(resp.get_headers().begin(), resp.get_headers().end());
-                m_http_listener((int)resp.get_status_code(), headers, resp.get_body());
+                MapStr mheader; mheader.map() = headers;
+                m_http_listener((int)resp.get_status_code(), mheader, resp.get_body());
             }
         });
         m_client.set_open_handler(std::bind(&client_instance<config>::on_open, this, _1));
@@ -178,7 +179,7 @@ namespace sio
         return true;
     }
 
-    void client_impl::connect(const map<string, string>& query, const map<string, string>& headers)
+    void client_impl::connect(const MapStr& query, const MapStr& headers)
     {
         if(m_reconn_timer)
         {
@@ -189,7 +190,8 @@ namespace sio
         m_reconn_made = 0;
 
         string query_str;
-        for(map<string,string>::const_iterator it=query.begin();it!=query.end();++it){
+        auto& map = query.map();
+        for(auto it=map.begin(); it!=map.end(); ++it){
             query_str.append("&");
             query_str.append(it->first);
             query_str.append("=");
@@ -197,7 +199,7 @@ namespace sio
         }
         m_query_string=move(query_str);
 
-        m_http_headers = headers;
+        m_http_headers = headers.map();
 
         this->reset_states();
         get_io_service().dispatch(std::bind(&client_impl::connect_impl,this,m_base_url,m_query_string));
@@ -578,27 +580,27 @@ namespace sio
         if(message && message->get_flag() == message::flag_object)
         {
             const object_message* obj_ptr =static_cast<object_message*>(message.get());
-            const map<string,message::ptr>* values = &(obj_ptr->get_map());
-            auto it = values->find("sid");
-            if (it!= values->end()) {
-                m_sid = static_pointer_cast<string_message>(it->second)->get_string();
+            auto it = obj_ptr->at("sid");
+            if (it) {
+                m_sid = it->get_string();
             }
             else
             {
                 goto failed;
             }
-            it = values->find("pingInterval");
-            if (it!= values->end()&&it->second->get_flag() == message::flag_integer) {
-                m_ping_interval = (unsigned)static_pointer_cast<int_message>(it->second)->get_int();
+
+            it = obj_ptr->at("pingInterval");
+            if (it&&it->get_flag() == message::flag_integer) {
+                m_ping_interval = (unsigned)it->get_int();
             }
             else
             {
                 m_ping_interval = 25000;
             }
-            it = values->find("pingTimeout");
 
-            if (it!=values->end()&&it->second->get_flag() == message::flag_integer) {
-                m_ping_timeout = (unsigned) static_pointer_cast<int_message>(it->second)->get_int();
+            it = obj_ptr->at("pingTimeout");
+            if (it&&it->get_flag() == message::flag_integer) {
+                m_ping_timeout = (unsigned) it->get_int();
             }
             else
             {

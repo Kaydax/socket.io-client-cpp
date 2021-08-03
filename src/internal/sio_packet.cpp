@@ -69,7 +69,8 @@ namespace sio
     void accept_object_message(object_message const& msg,Value& val,Document& doc,vector<shared_ptr<const string> >& buffers)
     {
         val.SetObject();
-        for (map<string,message::ptr>::const_iterator it = msg.get_map().begin(); it!= msg.get_map().end(); ++it) {
+        auto map = msg.get_map().map();
+        for (auto it = map.begin(); it!= map.end(); ++it) {
             Value nameVal;
             nameVal.SetString(it->first.data(), (SizeType)it->first.length(), doc.GetAllocator());
             Value valueVal;
@@ -171,7 +172,7 @@ namespace sio
                 if(it->name.IsString())
                 {
                     string key(it->name.GetString(),it->name.GetStringLength());
-                    static_cast<object_message*>(ptr.get())->get_map()[key] = from_json(it->value,buffers);
+                    static_cast<object_message*>(ptr.get())->insert(key.c_str(), from_json(it->value,buffers));
                 }
             }
             return ptr;

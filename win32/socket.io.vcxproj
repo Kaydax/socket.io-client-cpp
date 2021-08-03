@@ -200,6 +200,7 @@
     <ClCompile Include="..\src\internal\sio_client_impl.cpp" />
     <ClCompile Include="..\src\internal\sio_packet.cpp" />
     <ClCompile Include="..\src\sio_client.cpp" />
+    <ClCompile Include="..\src\sio_message.cpp" />
     <ClCompile Include="..\src\sio_socket.cpp" />
   </ItemGroup>
   <ItemGroup>

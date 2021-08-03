@@ -29,7 +29,44 @@
 
 namespace sio
 {
-    
+    class SIO_API MapStr {
+        typedef std::map<std::string, std::string> Container;
+        Container map_;
+    public:
+        MapStr() {}
+        Container& map();
+        const Container& map() const;
+
+        typedef bool(*EnumFunc)(const char* k, const char* v, void* data);
+        void enumerate(EnumFunc f, void* data) const;
+        int size() const;
+        void clear() { map_.clear(); }
+        const char* get(const char* key) const;
+        bool has(const char* key) const;
+        bool del(const char* key);
+        bool set(const char* key, const char* value);
+    };
+
+    class message;
+    typedef std::shared_ptr<message> msgptr;
+    class SIO_API MapMsg {
+        typedef std::map<std::string, msgptr> Container;
+        Container map_;
+    public:
+        MapMsg();
+        Container& map();
+        const Container& map() const;
+
+        typedef bool(*EnumFunc)(const char* k, msgptr p, void* data);
+        void enumerate(EnumFunc f, void* data) const;
+        int size() const;
+        void clear() { map_.clear(); }
+        msgptr get(const char* key) const;
+        bool has(const char* key) const;
+        bool del(const char* key);
+        bool set(const char* key, msgptr value);
+    };
+
     class SIO_API message
     {
     public:
@@ -103,19 +140,17 @@ namespace sio
             return s_empty_vector;
         }
 
-        virtual const std::map<std::string,message::ptr>& get_map() const
+        virtual const MapMsg& get_map() const
         {
             assert(false);
-            static std::map<std::string,message::ptr> s_empty_map;
-            s_empty_map.clear();
+            static MapMsg s_empty_map;
             return s_empty_map;
         }
 
-        virtual std::map<std::string,message::ptr>& get_map()
+        virtual MapMsg& get_map()
         {
             assert(false);
-            static std::map<std::string,message::ptr> s_empty_map;
-            s_empty_map.clear();
+            static MapMsg s_empty_map;
             return s_empty_map;
         }
     private:
@@ -371,7 +406,7 @@ namespace sio
 
     class SIO_API object_message : public message
     {
-        std::map<std::string,message::ptr> _v;
+        MapMsg _v;
         object_message() : message(flag_object)
         {
         }
@@ -383,43 +418,39 @@ namespace sio
 
         void insert(const char* key, message::ptr const& message)
         {
-            _v[key] = message;
+            _v.set(key, message);
         }
 
         void insert(const char* key,const std::string& text)
         {
-            _v[key] = string_message::create(text);
+            _v.set(key, string_message::create(text));
         }
 
         void insert(const char* key,const char* text)
         {
-            _v[key] = string_message::create(text);
+            _v.set(key, string_message::create(text));
         }
 
         void insert(const char* key,std::shared_ptr<std::string> const& binary)
         {
             if(binary)
-                _v[key] = binary_message::create(binary);
+                _v.set(key, binary_message::create(binary));
         }
 
         void insert(const char* key,std::shared_ptr<const std::string> const& binary)
         {
             if(binary)
-                _v[key] = binary_message::create(binary);
+                _v.set(key, binary_message::create(binary));
         }
 
         bool has(const char* key)
         {
-            return _v.find(key) != _v.end();
+            return _v.has(key);
         }
 
         const message::ptr& at(const char* key) const
         {
-            static std::shared_ptr<message> not_found;
-
-            std::map<std::string,message::ptr>::const_iterator it = _v.find(key);
-            if (it != _v.cend()) return it->second;
-            return not_found;
+            return _v.get(key);
         }
 
         const message::ptr& operator[] (const char* key) const
@@ -429,15 +460,15 @@ namespace sio
 
         bool has(const char* key) const
         {
-            return _v.find(key) != _v.end();
+            return _v.has(key);
         }
 
-        std::map<std::string,message::ptr>& get_map()
+        MapMsg& get_map()
         {
             return _v;
         }
 
-        const std::map<std::string,message::ptr>& get_map() const
+        const MapMsg& get_map() const
         {
             return _v;
         }

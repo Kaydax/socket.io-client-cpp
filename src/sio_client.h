@@ -49,7 +49,7 @@ namespace sio
 
         virtual void set_socket_close_listener(socket_listener const& l) = 0;
 
-        typedef std::function<void(int code, const std::map<std::string, std::string>& header, const std::string& body)> http_listener;
+        typedef std::function<void(int code, const MapStr& header, const std::string& body)> http_listener;
         virtual void set_http_listener(http_listener const& l) = 0;
 
         virtual void clear_con_listeners() = 0;
@@ -57,8 +57,8 @@ namespace sio
         virtual void clear_socket_listeners() = 0;
 
         // Client Functions - such as send, etc.
-        virtual void connect(const std::map<std::string, std::string>& query = {},
-            const std::map<std::string, std::string>& http_extra_headers = {}) = 0;
+        virtual void connect(const MapStr& query = {},
+            const MapStr& http_extra_headers = {}) = 0;
 
         virtual void set_reconnect_attempts(int attempts) = 0;
 
