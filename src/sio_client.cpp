@@ -30,4 +30,9 @@ namespace sio
     {
 
     }
+
+    void client::run_loop()
+    {
+        return client_impl::run_loop();
+    }
 }

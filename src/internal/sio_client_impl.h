@@ -109,8 +109,6 @@ namespace sio
         // Closes the connection
         void close();
         
-        void sync_close();
-        
         bool opened() const { return m_con_state == con_opened; }
         
         std::string const& get_sessionid() const { return m_sid; }
@@ -124,7 +122,10 @@ namespace sio
         // void set_logs_level(LogLevel level);
         virtual void log(const char* fmt, ...) = 0;
         static bool is_tls(const std::string& uri);
+        static void run_loop();
     protected:
+        static asio::io_service& get_io_service();
+
         void send(packet& p);
         
         void remove_socket(std::string const& nsp);
@@ -132,10 +133,7 @@ namespace sio
         void on_socket_closed(std::string const& nsp);
         void on_socket_opened(std::string const& nsp);
 
-        asio::io_service& get_io_service() { return *io_service; }
-        std::unique_ptr<asio::io_service> io_service;
     protected:
-        void run_loop();
 
         void connect_impl(const std::string& uri, const std::string& query);
 
@@ -233,6 +231,7 @@ namespace sio
     public:
         client_instance(const std::string& uri);
         ~client_instance();
+
         void close_impl(close::status::value const& code, std::string const& reason);
         void send_impl(std::shared_ptr<const std::string> const&  payload_ptr, frame::opcode::value opcode);
         void template_init();
