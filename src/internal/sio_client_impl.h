@@ -104,14 +104,14 @@ namespace sio
         void connect(const std::map<std::string, std::string>& queryString,
                      const std::map<std::string, std::string>& httpExtraHeaders);
         
-        sio::socket::ptr const& socket(const std::string& nsp);
+        sio::socket::ptr const& socket(const char* nsp);
         
         // Closes the connection
         void close();
         
         bool opened() const { return m_con_state == con_opened; }
         
-        std::string const& get_sessionid() const { return m_sid; }
+        const char* get_sessionid() const { return m_sid.c_str(); }
 
         void set_reconnect_attempts(int attempts) {m_reconn_attempts = attempts;}
 

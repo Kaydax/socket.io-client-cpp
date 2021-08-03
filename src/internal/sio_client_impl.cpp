@@ -204,11 +204,11 @@ namespace sio
         // m_network_thread.reset(new thread(std::bind(&client_impl::run_loop,this)));//uri lifecycle?
     }
 
-    socket::ptr const& client_impl::socket(string const& nsp)
+    socket::ptr const& client_impl::socket(const char* nsp)
     {
         lock_guard<mutex> guard(m_socket_mutex);
         string aux;
-        if(nsp == "")
+        if(!nsp || !nsp[0])
         {
             aux = "/";
         }
@@ -229,8 +229,9 @@ namespace sio
         }
         else
         {
-            pair<const string, socket::ptr> p(aux, sio::socket::create(this,aux));
-            return (m_sockets.insert(p).first)->second;
+            socket::ptr p = sio::socket::create(this, aux.c_str());
+            m_sockets[aux] = p;
+            return p;
         }
     }
 
@@ -289,12 +290,12 @@ namespace sio
 
     void client_impl::on_socket_closed(string const& nsp)
     {
-        if(m_socket_close_listener)m_socket_close_listener(nsp);
+        if(m_socket_close_listener)m_socket_close_listener(nsp.c_str());
     }
 
     void client_impl::on_socket_opened(string const& nsp)
     {
-        if(m_socket_open_listener)m_socket_open_listener(nsp);
+        if(m_socket_open_listener)m_socket_open_listener(nsp.c_str());
     }
 
     asio::io_service& client_impl::get_io_service()

@@ -9,9 +9,9 @@ namespace sio
     class SIO_API event
     {
     public:
-        const std::string& get_nsp() const;
+        const char* get_nsp() const;
 
-        const std::string& get_name() const;
+        const char* get_name() const;
 
         const message::ptr& get_message() const;
 
@@ -24,8 +24,8 @@ namespace sio
         message::list const& get_ack_message() const;
 
     protected:
-        event(std::string const& nsp, std::string const& name, message::list const& messages, bool need_ack);
-        event(std::string const& nsp, std::string const& name, message::list&& messages, bool need_ack);
+        event(const char* nsp, const char* name, message::list const& messages, bool need_ack);
+        event(const char* nsp, const char* name, message::list&& messages, bool need_ack);
 
         message::list& get_ack_message_impl();
 
@@ -46,7 +46,7 @@ namespace sio
     class SIO_API socket
     {
     public:
-        typedef std::function<void(const std::string& name, message::ptr const& message, bool need_ack, message::list& ack_message)> event_listener_aux;
+        typedef std::function<void(const char* name, message::ptr const& message, bool need_ack, message::list& ack_message)> event_listener_aux;
 
         typedef std::function<void(event& event)> event_listener;
 
@@ -56,11 +56,11 @@ namespace sio
 
         virtual ~socket();
 
-        virtual void on(std::string const& event_name, event_listener const& func) = 0;
+        virtual void on(const char* event_name, event_listener const& func) = 0;
 
-        virtual void on(std::string const& event_name, event_listener_aux const& func) = 0;
+        virtual void on(const char* event_name, event_listener_aux const& func) = 0;
 
-        virtual void off(std::string const& event_name) = 0;
+        virtual void off(const char* event_name) = 0;
 
         virtual void off_all() = 0;
 
@@ -70,13 +70,13 @@ namespace sio
 
         virtual void off_error() = 0;
 
-        virtual void emit(std::string const& name, message::list const& msglist = nullptr, std::function<void(message::list const&)> const& ack = nullptr) = 0;
+        virtual void emit(const char* name, message::list const& msglist = nullptr, std::function<void(message::list const&)> const& ack = nullptr) = 0;
 
-        virtual  std::string const& get_namespace() const = 0;
+        virtual const char* get_namespace() const = 0;
 
     protected:
         socket() {};
-        static ptr create(client_impl*, std::string const&);
+        static ptr create(client_impl*, const char*);
 
         virtual void on_connected() = 0;
 

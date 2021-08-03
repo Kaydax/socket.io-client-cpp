@@ -101,7 +101,18 @@ void bind_events()
                        }));
 }
 
+#include "RoomClient.h"
 MAIN_FUNC
+{
+    RoomClient client;
+    std::map<std::string, std::string> query;
+    query["peerId"] = "n6pewpmf";
+    query["roomId"] = "qkids";
+    client.Connect("wss://localhost:443", query);
+    sio::client::run_loop();
+}
+
+int test()
 {
 
     auto cli = sio::client::create("https://localhost");
@@ -169,7 +180,7 @@ Login:
                 {
                     current_socket->close();
                 }
-                current_socket = h.socket(new_nsp);
+                current_socket = h.socket(new_nsp.c_str());
                 bind_events();
                 //if change to default nsp, we do not need to login again (since it is not closed).
                 if(current_socket->get_namespace() == "/")
@@ -185,7 +196,7 @@ Login:
         }
     }
     HIGHLIGHT("Closing...");
-    h.sync_close();
+    h.close();
     h.clear_con_listeners();
 	return 0;
 }

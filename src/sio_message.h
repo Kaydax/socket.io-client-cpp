@@ -29,6 +29,7 @@
 
 namespace sio
 {
+    
     class SIO_API message
     {
     public:
@@ -77,16 +78,13 @@ namespace sio
         {
             assert(false);
             static std::string s_empty_string;
-            s_empty_string.clear();
             return s_empty_string;
         }
 
         virtual std::shared_ptr<const std::string> const& get_binary() const
         {
             assert(false);
-            static std::shared_ptr<const std::string> s_empty_binary;
-            s_empty_binary = nullptr;
-            return s_empty_binary;
+            return nullptr;
         }
 
         virtual const std::vector<ptr>& get_vector() const
@@ -218,8 +216,8 @@ namespace sio
         {
         }
 
-        string_message(std::string&& v)
-            :message(flag_string),_v(move(v))
+        string_message(const char* v)
+            :message(flag_string),_v(v)
         {
         }
     public:
@@ -228,9 +226,14 @@ namespace sio
             return ptr(new string_message(v));
         }
 
-        static message::ptr create(std::string&& v)
+        static message::ptr create(const char* v)
         {
-            return ptr(new string_message(move(v)));
+            return ptr(new string_message(v));
+        }
+
+        const char* c_str() const
+        {
+            return _v.c_str();
         }
 
         std::string const& get_string() const
@@ -250,6 +253,20 @@ namespace sio
         static message::ptr create(std::shared_ptr<const std::string> const& v)
         {
             return ptr(new binary_message(v));
+        }
+
+        static message::ptr create(const uint8_t* data, int size)
+        {
+            auto v = std::make_shared<std::string>((const char*)data, size);
+            return ptr(new binary_message(v));
+        }
+
+        void set(const uint8_t* data, int size) {
+            _v = std::make_shared<std::string>((const char*)data, size);
+        }
+        uint8_t* get_binary(int& size) const {
+            size = _v->length();
+            return (uint8_t*)_v->data();
         }
 
         std::shared_ptr<const std::string> const& get_binary() const
@@ -282,9 +299,9 @@ namespace sio
             _v.push_back(string_message::create(text));
         }
 
-        void push(std::string&& text)
+        void push(const char* text)
         {
-            _v.push_back(string_message::create(move(text)));
+            _v.push_back(string_message::create(text));
         }
 
         void push(std::shared_ptr<std::string> const& binary)
@@ -309,9 +326,9 @@ namespace sio
             _v.insert(_v.begin()+pos, string_message::create(text));
         }
 
-        void insert(size_t pos,std::string&& text)
+        void insert(size_t pos,const char* text)
         {
-            _v.insert(_v.begin()+pos, string_message::create(move(text)));
+            _v.insert(_v.begin()+pos, string_message::create(text));
         }
 
         void insert(size_t pos,std::shared_ptr<std::string> const& binary)
@@ -364,39 +381,39 @@ namespace sio
             return ptr(new object_message());
         }
 
-        void insert(const std::string & key,message::ptr const& message)
+        void insert(const char* key, message::ptr const& message)
         {
             _v[key] = message;
         }
 
-        void insert(const std::string & key,const std::string& text)
+        void insert(const char* key,const std::string& text)
         {
             _v[key] = string_message::create(text);
         }
 
-        void insert(const std::string & key,std::string&& text)
+        void insert(const char* key,const char* text)
         {
-            _v[key] = string_message::create(move(text));
+            _v[key] = string_message::create(text);
         }
 
-        void insert(const std::string & key,std::shared_ptr<std::string> const& binary)
-        {
-            if(binary)
-                _v[key] = binary_message::create(binary);
-        }
-
-        void insert(const std::string & key,std::shared_ptr<const std::string> const& binary)
+        void insert(const char* key,std::shared_ptr<std::string> const& binary)
         {
             if(binary)
                 _v[key] = binary_message::create(binary);
         }
 
-        bool has(const std::string & key)
+        void insert(const char* key,std::shared_ptr<const std::string> const& binary)
+        {
+            if(binary)
+                _v[key] = binary_message::create(binary);
+        }
+
+        bool has(const char* key)
         {
             return _v.find(key) != _v.end();
         }
 
-        const message::ptr& at(const std::string & key) const
+        const message::ptr& at(const char* key) const
         {
             static std::shared_ptr<message> not_found;
 
@@ -405,12 +422,12 @@ namespace sio
             return not_found;
         }
 
-        const message::ptr& operator[] (const std::string & key) const
+        const message::ptr& operator[] (const char* key) const
         {
             return at(key);
         }
 
-        bool has(const std::string & key) const
+        bool has(const char* key) const
         {
             return _v.find(key) != _v.end();
         }
@@ -474,9 +491,9 @@ namespace sio
             m_vector.push_back(string_message::create(text));
         }
 
-        list(std::string&& text)
+        list(const char* text)
         {
-            m_vector.push_back(string_message::create(move(text)));
+            m_vector.push_back(string_message::create(text));
         }
 
         list(std::shared_ptr<std::string> const& binary)
@@ -502,9 +519,9 @@ namespace sio
             m_vector.push_back(string_message::create(text));
         }
 
-        void push(std::string&& text)
+        void push(const char* text)
         {
-            m_vector.push_back(string_message::create(move(text)));
+            m_vector.push_back(string_message::create(text));
         }
 
         void push(std::shared_ptr<std::string> const& binary)
@@ -529,9 +546,9 @@ namespace sio
             m_vector.insert(m_vector.begin()+pos, string_message::create(text));
         }
 
-        void insert(size_t pos,std::string&& text)
+        void insert(size_t pos,const char* text)
         {
-            m_vector.insert(m_vector.begin()+pos, string_message::create(move(text)));
+            m_vector.insert(m_vector.begin()+pos, string_message::create(text));
         }
 
         void insert(size_t pos,std::shared_ptr<std::string> const& binary)
@@ -561,7 +578,7 @@ namespace sio
             return m_vector[i];
         }
 
-        message::ptr to_array_message(std::string const& event_name) const
+        message::ptr to_array_message(const char* event_name) const
         {
             message::ptr arr = array_message::create();
             arr->get_vector().push_back(string_message::create(event_name));

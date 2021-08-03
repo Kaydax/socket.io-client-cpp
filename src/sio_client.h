@@ -29,9 +29,9 @@ namespace sio
 
         typedef std::function<void(unsigned, unsigned)> reconnect_listener;
 
-        typedef std::function<void(std::string const& nsp)> socket_listener;
+        typedef std::function<void(const char* nsp)> socket_listener;
         typedef std::shared_ptr<client> ptr;
-        static ptr create(const std::string& uri);
+        static ptr create(const char* uri);
         virtual ~client();
 
         //set listeners and event bindings.
@@ -74,7 +74,7 @@ namespace sio
         };
         virtual void set_logs_level(LogLevel level) = 0;
 
-        virtual sio::socket::ptr const& socket(const std::string& nsp = "") = 0;
+        virtual sio::socket::ptr const& socket(const char* nsp = "") = 0;
 
         // Closes the connection
         virtual void close() = 0;
@@ -83,7 +83,7 @@ namespace sio
 
         virtual bool opened() const = 0;
 
-        virtual std::string const& get_sessionid() const = 0;
+        virtual const char* get_sessionid() const = 0;
 
         virtual void log(const char* fmt, ...) = 0;
     protected:

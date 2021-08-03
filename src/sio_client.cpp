@@ -12,7 +12,7 @@ using std::stringstream;
 
 namespace sio
 {    
-    client::ptr client::create(const std::string& uri)
+    client::ptr client::create(const char* uri)
     {
 #if SIO_TLS
         if (client_impl::is_tls(uri))

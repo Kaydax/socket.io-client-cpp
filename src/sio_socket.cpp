@@ -26,20 +26,20 @@ namespace sio
             return std::bind(&event_adapter::adapt_func, func,std::placeholders::_1);
         }
         
-        static inline event create_event(std::string const& nsp,std::string const& name,message::list&& message,bool need_ack)
+        static inline event create_event(const char* nsp,const char* name,message::list&& message,bool need_ack)
         {
             return event(nsp,name,message,need_ack);
         }
     };
     
-    const std::string& event::get_nsp() const
+    const char* event::get_nsp() const
     {
-        return m_nsp;
+        return m_nsp.c_str();
     }
     
-    const std::string& event::get_name() const
+    const char* event::get_name() const
     {
-        return m_name;
+        return m_name.c_str();
     }
     
     const message::ptr& event::get_message() const
@@ -70,7 +70,7 @@ namespace sio
     }
     
     inline
-    event::event(std::string const& nsp,std::string const& name,message::list&& messages,bool need_ack):
+    event::event(const char* nsp,const char* name,message::list&& messages,bool need_ack):
         m_nsp(nsp),
         m_name(name),
         m_messages(std::move(messages)),
@@ -79,7 +79,7 @@ namespace sio
     }
 
     inline
-    event::event(std::string const& nsp,std::string const& name,message::list const& messages,bool need_ack):
+    event::event(const char* nsp,const char* name,message::list const& messages,bool need_ack):
         m_nsp(nsp),
         m_name(name),
         m_messages(messages),
@@ -102,14 +102,14 @@ namespace sio
     {
     public:
         
-        socket_impl(client_impl *,std::string const&);
+        socket_impl(client_impl *,const char*);
         ~socket_impl();
         
-        void on(std::string const& event_name,event_listener_aux const& func);
+        void on(const char* event_name,event_listener_aux const& func);
         
-        void on(std::string const& event_name,event_listener const& func);
+        void on(const char* event_name,event_listener const& func);
         
-        void off(std::string const& event_name);
+        void off(const char* event_name);
         
         void off_all();
         
@@ -127,9 +127,9 @@ namespace sio
         
         void close();
         
-        void emit(std::string const& name, message::list const& msglist, std::function<void (message::list const&)> const& ack);
+        void emit(const char* name, message::list const& msglist, std::function<void (message::list const&)> const& ack);
         
-        std::string const& get_namespace() const {return m_nsp;}
+        const char* get_namespace() const {return m_nsp.c_str();}
         
     protected:
         void on_connected();
@@ -185,18 +185,18 @@ namespace sio
         friend class socket;
     };
     
-    void socket_impl::on(std::string const& event_name, event_listener_aux const& func)
+    void socket_impl::on(const char* event_name, event_listener_aux const& func)
     {
         this->on(event_name,event_adapter::do_adapt(func));
     }
     
-    void socket_impl::on(std::string const& event_name,event_listener const& func)
+    void socket_impl::on(const char* event_name,event_listener const& func)
     {
         std::lock_guard<std::mutex> guard(m_event_mutex);
         m_event_binding[event_name] = func;
     }
     
-    void socket_impl::off(std::string const& event_name)
+    void socket_impl::off(const char* event_name)
     {
         std::lock_guard<std::mutex> guard(m_event_mutex);
         auto it = m_event_binding.find(event_name);
@@ -222,7 +222,7 @@ namespace sio
         m_error_listener = nullptr;
     }
     
-    socket_impl::socket_impl(client_impl *client,std::string const& nsp):
+    socket_impl::socket_impl(client_impl *client,const char* nsp):
         m_client(client),
         m_connected(false),
         m_nsp(nsp)
@@ -241,7 +241,7 @@ namespace sio
     
     unsigned int socket_impl::s_global_event_id = 1;
     
-    void socket_impl::emit(std::string const& name, message::list const& msglist, std::function<void (message::list const&)> const& ack)
+    void socket_impl::emit(const char* name, message::list const& msglist, std::function<void (message::list const&)> const& ack)
     {
         NULL_GUARD(m_client);
         message::ptr msg_ptr = msglist.to_array_message(name);
@@ -434,7 +434,7 @@ namespace sio
     void socket_impl::on_socketio_event(const std::string& nsp,int msgId,const std::string& name, message::list && message)
     {
         bool needAck = msgId >= 0;
-        event ev = event_adapter::create_event(nsp,name, std::move(message),needAck);
+        event ev = event_adapter::create_event(nsp.c_str(), name.c_str(), std::move(message),needAck);
         event_listener func = this->get_bind_listener_locked(name);
         if(func)func(ev);
         if(needAck)
@@ -523,7 +523,7 @@ namespace sio
     {
     }
  
-    socket::ptr socket::create(client_impl* client, std::string const& nsp)
+    socket::ptr socket::create(client_impl* client, const char* nsp)
     {
         return std::make_shared<socket_impl>(client, nsp);
     }
