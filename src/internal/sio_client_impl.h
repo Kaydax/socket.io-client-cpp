@@ -232,7 +232,7 @@ namespace sio
         client_type m_client;
     public:
         client_instance(const std::string& uri);
-
+        ~client_instance();
         void close_impl(close::status::value const& code, std::string const& reason);
         void send_impl(std::shared_ptr<const std::string> const&  payload_ptr, frame::opcode::value opcode);
         void template_init();
@@ -242,6 +242,7 @@ namespace sio
         void log(const char* fmt, ...);
 
     };
+
 }
 #endif // SIO_CLIENT_IMPL_H
 

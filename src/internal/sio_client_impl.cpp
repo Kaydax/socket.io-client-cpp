@@ -86,6 +86,11 @@ namespace sio
     client_impl::~client_impl()
     {
         this->sockets_invoke_void(&sio::socket::on_close);
+    }
+
+    template <typename config>
+    sio::client_instance<config>::~client_instance()
+    {
         sync_close();
     }
 
@@ -259,7 +264,8 @@ namespace sio
         close();
         if(m_network_thread)
         {
-            m_network_thread->join();
+            if(m_network_thread->joinable())
+                m_network_thread->join();
             m_network_thread.reset();
         }
     }
