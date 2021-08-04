@@ -1,8 +1,39 @@
+ websocketpp/connection.hpp           | 12 +++++++++++-
  websocketpp/impl/connection_impl.hpp | 34 +++++++++++++++++++++++++++++++---
- 1 file changed, 31 insertions(+), 3 deletions(-)
+ 2 files changed, 42 insertions(+), 4 deletions(-)
 
+diff --git a/websocketpp/connection.hpp b/websocketpp/connection.hpp
+index d019fce..84c66f1 100644
+--- a/websocketpp/connection.hpp
++++ b/websocketpp/connection.hpp
+@@ -1357,6 +1357,17 @@ public:
+         m_connection_hdl = hdl;
+         transport_con_type::set_handle(hdl);
+     }
++    void set_http(const std::string& method, const std::string& body = ""){
++        m_is_http = true;
++        m_request.set_method(method);
++        if(body.length())
++            m_request.set_body(body);
++    }
++    void set_http(bool v = true){
++        m_is_http = v;
++        if(v)
++            m_request.set_method("GET");
++    }
+ protected:
+     void handle_transport_init(lib::error_code const & ec);
+ 
+@@ -1627,7 +1638,6 @@ private:
+     /// A flag that gets set once it is determined that the connection is an
+     /// HTTP connection and not a WebSocket one.
+     bool m_is_http;
+-    
+     /// A flag that gets set when the completion of an http connection is
+     /// deferred until later.
+     session::http_state::value m_http_state;
 diff --git a/websocketpp/impl/connection_impl.hpp b/websocketpp/impl/connection_impl.hpp
-index bf88c95..789a3e9 100644
+index bf88c95..93dd4ef 100644
 --- a/websocketpp/impl/connection_impl.hpp
 +++ b/websocketpp/impl/connection_impl.hpp
 @@ -1440,8 +1440,16 @@ void connection<config>::send_http_request() {
@@ -12,7 +43,7 @@ index bf88c95..789a3e9 100644
 -        ec = m_processor->client_handshake_request(m_request,m_uri,
 -            m_requested_subprotocols);
 +        if(m_is_http){
-+            m_request.set_method("GET");
++            // m_request.set_method("GET");
 +            m_request.set_uri(m_uri->get_resource());
 +            m_request.set_version("HTTP/1.1");
 +            m_request.replace_header("Host",m_uri->get_host_port());
@@ -30,7 +61,7 @@ index bf88c95..789a3e9 100644
          }
 -
 +        if(m_is_http) {
-+            if(m_response.ready()) {
++            if(m_response.ready() || m_request.get_method() == "HEAD") {
 +                if (m_http_handler)
 +                    m_http_handler(m_connection_hdl);
 +                this->terminate(make_error_code(error::http_connection_ended));

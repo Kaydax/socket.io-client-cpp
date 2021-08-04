@@ -108,7 +108,7 @@ MAIN_FUNC
 	sio::client& h = *cli;
     //h.set_logs_level(client::log_verbose);
     connection_listener l(h);
-    
+
     h.set_open_listener(std::bind(&connection_listener::on_connected, &l));
     h.set_close_listener(std::bind(&connection_listener::on_close, &l,std::placeholders::_1));
     h.set_fail_listener(std::bind(&connection_listener::on_fail, &l));
@@ -116,6 +116,11 @@ MAIN_FUNC
         std::cout << "httpResp " << code << " body: " << body << std::endl;
     });
     h.connect();
+    
+    std::thread([] {
+        sio::client::run_loop();
+    }).detach();
+
     _lock.lock();
     if(!connect_finish)
     {
@@ -185,7 +190,7 @@ Login:
         }
     }
     HIGHLIGHT("Closing...");
-    h.sync_close();
+    h.close();
     h.clear_con_listeners();
 	return 0;
 }
