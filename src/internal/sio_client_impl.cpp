@@ -70,6 +70,7 @@ namespace sio
     client_impl::client_impl(const std::string& url) :
         m_ping_interval(0),
         m_ping_timeout(0),
+        m_network_thread(),
         m_con_state(con_closed),
         m_reconn_delay(5000),
         m_reconn_delay_max(25000),
@@ -77,7 +78,7 @@ namespace sio
         m_reconn_made(0)
     {
         m_base_url = url;
-        
+        io_service.reset(new lib::asio::io_service());
         m_packet_mgr.set_decode_callback(std::bind(&client_impl::on_decode,this,_1));
         m_packet_mgr.set_encode_callback(std::bind(&client_impl::on_encode,this,_1,_2));
     }
@@ -90,7 +91,7 @@ namespace sio
     template <typename config>
     sio::client_instance<config>::~client_instance()
     {
-        close();
+        sync_close();
     }
 
     template <typename config>
@@ -100,7 +101,7 @@ namespace sio
         set_logs_level(client::log_default);
     #endif
         // Initialize the Asio transport policy
-        m_client.init_asio(&get_io_service());
+        m_client.init_asio(io_service.get());
 
         // Bind the clients we are using
         m_client.set_http_handler([this](connection_hdl con) {
@@ -185,6 +186,22 @@ namespace sio
             m_reconn_timer->cancel();
             m_reconn_timer.reset();
         }
+        if(m_network_thread)
+        {
+            if(m_con_state == con_closing||m_con_state == con_closed)
+            {
+                //if client is closing, join to wait.
+                //if client is closed, still need to join,
+                //but in closed case,join will return immediately.
+                m_network_thread->join();
+                m_network_thread.reset();//defensive
+            }
+            else
+            {
+                //if we are connected, do nothing.
+                return;
+            }
+        }
         m_con_state = con_opening;
         m_reconn_made = 0;
 
@@ -201,7 +218,8 @@ namespace sio
 
         this->reset_states();
         get_io_service().dispatch(std::bind(&client_impl::connect_impl,this,m_base_url,m_query_string));
-        // m_network_thread.reset(new thread(std::bind(&client_impl::run_loop,this)));//uri lifecycle?
+        m_network_thread.reset(new thread(std::bind(&client_impl::run_loop,this)));//uri lifecycle?
+
     }
 
     socket::ptr const& client_impl::socket(string const& nsp)
@@ -239,6 +257,17 @@ namespace sio
         m_con_state = con_closing;
         this->sockets_invoke_void(&sio::socket::close);
         get_io_service().dispatch(std::bind(&client_impl::close_impl, this,close::status::normal,"End by user"));
+    }
+
+    void client_impl::sync_close()
+    {
+        close();
+        if(m_network_thread)
+        {
+            if(m_network_thread->joinable())
+                m_network_thread->join();
+            m_network_thread.reset();
+        }
     }
 
     template<typename config>
@@ -297,22 +326,13 @@ namespace sio
         if(m_socket_open_listener)m_socket_open_listener(nsp);
     }
 
-    asio::io_service& client_impl::get_io_service()
-    {
-        static std::unique_ptr<asio::io_service> io_service;
-        if (!io_service) {
-            io_service.reset(new lib::asio::io_service());
-        }
-        return *io_service;
-    }
-
     /*************************private:*************************/
     void client_impl::run_loop()
     {
-        if (asio::io_service* ios = &get_io_service()) {
-            ios->run();
-            ios->reset();
-            //log("run loop end");
+        if (io_service) {
+            io_service->run();
+            io_service->reset();
+            log("run loop end");
         }
     }
 
@@ -671,6 +691,7 @@ failed:
     
     void client_impl::reset_states()
     {
+        io_service->reset();
         m_sid.clear();
         m_packet_mgr.reset();
     }

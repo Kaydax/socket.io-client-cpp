@@ -79,7 +79,7 @@ namespace sio
         // Closes the connection
         virtual void close() = 0;
 
-        static void run_loop();
+        virtual void sync_close() = 0;
 
         virtual bool opened() const = 0;
 
