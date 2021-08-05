@@ -292,7 +292,7 @@ namespace sio
     template<typename config>
     void client_instance<config>::log(const char* fmt, ...)
     {
-        char line[1024];
+        char line[2048];
         va_list vl;
         va_start(vl, fmt);
         vsnprintf(line, sizeof(line) - 1, fmt, vl);
@@ -423,6 +423,7 @@ namespace sio
         packet p(packet::frame_ping);
         m_packet_mgr.encode(p, [&](bool /*isBin*/,shared_ptr<const string> payload)
         {
+            log("send ping");
             send_impl(payload, frame::opcode::text);
         });
         if(!m_ping_timeout_timer)
@@ -583,10 +584,10 @@ namespace sio
     
     void client_impl::on_message(connection_hdl, const string& msg)
     {
-        if (m_ping_timeout_timer) {
+        if (m_ping_timer) {
             asio::error_code ec;
-            m_ping_timeout_timer->expires_from_now(milliseconds(m_ping_timeout),ec);
-            m_ping_timeout_timer->async_wait(std::bind(&client_impl::timeout_pong, this, std::placeholders::_1));
+            m_ping_timer->expires_from_now(milliseconds(m_ping_interval),ec);
+            m_ping_timer->async_wait(std::bind(&client_impl::ping, this, std::placeholders::_1));
         }
         // Parse the incoming message according to socket.IO rules
         m_packet_mgr.put_payload(msg);
@@ -624,6 +625,10 @@ namespace sio
                 m_ping_timeout = 60000;
             }
 
+            log("on_handshake sid=%s, pingInterval=%d, pingTimeout=%d", m_sid.c_str(), m_ping_interval, m_ping_timeout);
+            if (m_ping_interval>0) {
+                m_ping_timer.reset(new asio::steady_timer(get_io_service()));
+            }
             return;
         }
 failed:
@@ -633,13 +638,18 @@ failed:
 
     void client_impl::on_ping()
     {
+        log("recv ping");
         packet p(packet::frame_pong);
         m_packet_mgr.encode(p, [&](bool /*isBin*/,shared_ptr<const string> payload)
         {
             send_impl(payload, frame::opcode::text);
         });
+    }
 
-        if(m_ping_timeout_timer)
+    void client_impl::on_pong()
+    {
+        log("recv pong");
+        if (m_ping_timeout_timer)
         {
             m_ping_timeout_timer->cancel();
             m_ping_timeout_timer.reset();
@@ -666,7 +676,9 @@ failed:
         case packet::frame_ping:
             this->on_ping();
             break;
-
+        case packet::frame_pong:
+            this->on_pong();
+            break;
         default:
             break;
         }
@@ -686,6 +698,11 @@ failed:
         {
             m_ping_timeout_timer->cancel(ec);
             m_ping_timeout_timer.reset();
+        }
+        if (m_ping_timer)
+        {
+            m_ping_timer->cancel();
+            m_ping_timer.reset();
         }
     }
     

@@ -171,7 +171,7 @@ namespace sio
         void on_handshake(message::ptr const& message);
 
         void on_ping();
-
+        void on_pong();
         void reset_states();
 
         void clear_timers();
@@ -194,7 +194,7 @@ namespace sio
         
         packet_manager m_packet_mgr;
         
-        std::unique_ptr<asio::steady_timer> m_ping_timeout_timer;
+        std::unique_ptr<asio::steady_timer> m_ping_timeout_timer, m_ping_timer;
 
         std::unique_ptr<asio::steady_timer> m_reconn_timer;
         
