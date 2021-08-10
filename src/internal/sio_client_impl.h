@@ -143,9 +143,12 @@ namespace sio
         virtual void send_impl(std::shared_ptr<const std::string> const&  payload_ptr,frame::opcode::value opcode) = 0;
         virtual bool ws_connect(const std::string& uri, bool http) = 0;
 
+        void schedule_ping();
         void ping(const asio::error_code& ec);
-        
         void timeout_pong(const asio::error_code& ec);
+
+        void on_ping();
+        void on_pong();
 
         void timeout_reconnect(asio::error_code const& ec);
 
@@ -170,8 +173,7 @@ namespace sio
         //socketio callbacks
         void on_handshake(message::ptr const& message);
 
-        void on_ping();
-        void on_pong();
+
         void reset_states();
 
         void clear_timers();

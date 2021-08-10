@@ -125,6 +125,7 @@ namespace sio
             else
             {
                 code = conn_ptr->get_local_close_code();
+                log("sio close %s", close::status::get_string(code).c_str());
             }
             this->on_close(con, code == close::status::normal);
         });
@@ -284,7 +285,7 @@ namespace sio
 		case client::log_quiet:
 			break;
 		case client::log_verbose:
-			m_client.set_access_channels(websocketpp::log::alevel::all);
+			m_client.set_access_channels(websocketpp::log::alevel::all ^ websocketpp::log::alevel::frame_payload);
 			break;
 		}
 	}
@@ -292,7 +293,7 @@ namespace sio
     template<typename config>
     void client_instance<config>::log(const char* fmt, ...)
     {
-        char line[2048];
+        char line[4096];
         va_list vl;
         va_start(vl, fmt);
         vsnprintf(line, sizeof(line) - 1, fmt, vl);
@@ -433,6 +434,7 @@ namespace sio
             m_ping_timeout_timer->expires_from_now(milliseconds(m_ping_timeout), timeout_ec);
             m_ping_timeout_timer->async_wait(std::bind(&client_impl::timeout_pong, this, std::placeholders::_1));
         }
+        schedule_ping();
     }
 
     void client_impl::timeout_pong(const asio::error_code &ec)
@@ -584,11 +586,13 @@ namespace sio
     
     void client_impl::on_message(connection_hdl, const string& msg)
     {
+        /*
         if (m_ping_timer) {
             asio::error_code ec;
             m_ping_timer->expires_from_now(milliseconds(m_ping_interval),ec);
             m_ping_timer->async_wait(std::bind(&client_impl::ping, this, std::placeholders::_1));
         }
+        */
         // Parse the incoming message according to socket.IO rules
         m_packet_mgr.put_payload(msg);
     }
@@ -626,14 +630,22 @@ namespace sio
             }
 
             log("on_handshake sid=%s, pingInterval=%d, pingTimeout=%d", m_sid.c_str(), m_ping_interval, m_ping_timeout);
-            if (m_ping_interval>0) {
-                m_ping_timer.reset(new asio::steady_timer(get_io_service()));
-            }
+            schedule_ping();
             return;
         }
 failed:
         //just close it.
-        get_io_service().dispatch(std::bind(&client_impl::close_impl, this,close::status::policy_violation,"Handshake error"));
+        get_io_service().dispatch(std::bind(&client_impl::close_impl, this, close::status::policy_violation, "Handshake error"));
+    }
+
+    void client_impl::schedule_ping()
+    {
+        if (m_ping_interval > 0) {
+            m_ping_timer.reset(new asio::steady_timer(get_io_service()));
+            asio::error_code ec;
+            m_ping_timer->expires_from_now(milliseconds(m_ping_interval), ec);
+            m_ping_timer->async_wait(std::bind(&client_impl::ping, this, std::placeholders::_1));
+        }
     }
 
     void client_impl::on_ping()
