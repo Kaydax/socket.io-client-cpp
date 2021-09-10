@@ -1,8 +1,6 @@
 #include "sio_socket.h"
 #include "internal/sio_packet.h"
 #include "internal/sio_client_impl.h"
-#include <asio/steady_timer.hpp>
-#include <asio/error_code.hpp>
 #include <queue>
 #include <chrono>
 #include <cstdarg>
@@ -153,7 +151,7 @@ namespace sio
         
         void ack(int msgId,string const& name,message::list const& ack_message);
         
-        void timeout_connection(const asio::error_code &ec);
+        void timeout_connection();
         
         void send_connect();
         
@@ -174,7 +172,7 @@ namespace sio
         
         error_listener m_error_listener;
         
-        std::unique_ptr<asio::steady_timer> m_connection_timer;
+        uint32_t m_connection_timer = 0;
         
         std::queue<packet> m_packet_queue;
         
@@ -267,10 +265,7 @@ namespace sio
             return;
         packet p(packet::type_connect, m_nsp);
         m_client->send(p);
-        m_connection_timer.reset(new asio::steady_timer(m_client->get_io_service()));
-        asio::error_code ec;
-        m_connection_timer->expires_from_now(std::chrono::milliseconds(20000), ec);
-        m_connection_timer->async_wait(std::bind(&socket_impl::timeout_connection,this, std::placeholders::_1));
+        m_connection_timer = m_client->createTimer(20000, std::bind(&socket_impl::timeout_connection,this));
     }
     
     void socket_impl::close()
@@ -281,13 +276,9 @@ namespace sio
             packet p(packet::type_disconnect,m_nsp);
             send_packet(p);
             
-            if(!m_connection_timer)
-            {
-                m_connection_timer.reset(new asio::steady_timer(m_client->get_io_service()));
-            }
-            asio::error_code ec;
-            m_connection_timer->expires_from_now(std::chrono::milliseconds(3000), ec);
-            m_connection_timer->async_wait(std::bind(&socket_impl::on_close, this));
+            if(m_connection_timer)
+                m_client->cancelTimer(m_connection_timer);
+            m_connection_timer = m_client->createTimer(3000, std::bind(&socket_impl::on_close, this));
         }
     }
     
@@ -295,8 +286,8 @@ namespace sio
     {
         if(m_connection_timer)
         {
-            m_connection_timer->cancel();
-            m_connection_timer.reset();
+            m_client->cancelTimer(m_connection_timer);
+            m_connection_timer = 0;
         }
         if(!m_connected)
         {
@@ -326,8 +317,8 @@ namespace sio
 
         if(m_connection_timer)
         {
-            m_connection_timer->cancel();
-            m_connection_timer.reset();
+			m_client->cancelTimer(m_connection_timer);
+			m_connection_timer = 0;
         }
         m_connected = false;
 		{
@@ -469,14 +460,13 @@ namespace sio
         if(m_error_listener)m_error_listener(err_message);
     }
     
-    void socket_impl::timeout_connection(const asio::error_code &ec)
+    void socket_impl::timeout_connection()
     {
         NULL_GUARD(m_client);
-        if(ec)
-        {
-            return;
-        }
-        m_connection_timer.reset();
+		if (m_connection_timer) {
+			m_client->cancelTimer(m_connection_timer);
+			m_connection_timer = 0;
+		}
         m_client->log("Connection timeout,close socket.");
         //Should close socket if no connected message arrive.Otherwise we'll never ask for open again.
         this->on_close();

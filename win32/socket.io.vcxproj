@@ -197,14 +197,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\internal\IoService.cpp" />
     <ClCompile Include="..\src\internal\sio_client_impl.cpp" />
     <ClCompile Include="..\src\internal\sio_packet.cpp" />
+    <ClCompile Include="..\src\internal\WsClient.cpp" />
     <ClCompile Include="..\src\sio_client.cpp" />
     <ClCompile Include="..\src\sio_socket.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\internal\IoService.h" />
+    <ClInclude Include="..\src\internal\IWSClient.h" />
     <ClInclude Include="..\src\internal\sio_client_impl.h" />
     <ClInclude Include="..\src\internal\sio_packet.h" />
+    <ClInclude Include="..\src\internal\WsClient.h" />
     <ClInclude Include="..\src\sio_client.h" />
     <ClInclude Include="..\src\sio_message.h" />
     <ClInclude Include="..\src\sio_socket.h" />

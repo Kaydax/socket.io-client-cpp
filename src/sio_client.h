@@ -30,6 +30,7 @@ namespace sio
         typedef std::function<void(unsigned, unsigned)> reconnect_listener;
 
         typedef std::function<void(std::string const& nsp)> socket_listener;
+
         typedef std::shared_ptr<client> ptr;
         static ptr create(const std::string& uri);
         virtual ~client();
@@ -65,7 +66,7 @@ namespace sio
         virtual void set_reconnect_delay(unsigned millis) = 0;
 
         virtual void set_reconnect_delay_max(unsigned millis) = 0;
-
+		
         enum LogLevel
         {
             log_default,
@@ -73,19 +74,17 @@ namespace sio
             log_verbose
         };
         virtual void set_logs_level(LogLevel level) = 0;
+		//virtual void log(const char* fmt, ...) = 0;
 
         virtual sio::socket::ptr const& socket(const std::string& nsp = "") = 0;
 
         // Closes the connection
         virtual void close() = 0;
 
-        virtual void sync_close() = 0;
-
         virtual bool opened() const = 0;
 
         virtual std::string const& get_sessionid() const = 0;
 
-        virtual void log(const char* fmt, ...) = 0;
     protected:
         client();
     private:
