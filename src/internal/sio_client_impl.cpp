@@ -180,12 +180,17 @@ namespace sio
 
     void client_impl::log(const char* fmt, ...)
     {
-        //char line[4096];
+        char line[4096];
         va_list vl;
         va_start(vl, fmt);
-        vprintf(fmt, vl);
-        // m_client.get_alog().write(websocketpp::log::alevel::app, line);
+        int n = vsnprintf(line, sizeof(line), fmt, vl);
         va_end(vl);
+		if (n && line[n - 1] != '\n') {
+			line[n++] = '\n';
+			line[n++] = 0;
+		}
+		fputs(line, stdout);
+        // m_client.get_alog().write(websocketpp::log::alevel::app, line);
     }
 
     /*************************protected:*************************/
@@ -251,7 +256,7 @@ namespace sio
 
 			m_con = IWSClient::Create(uri.c_str());
 			m_con->SetEvent(this);
-			m_con->Open(ss.str().c_str());
+			m_con->Open(ss.str().c_str(), m_http_headers);
 			// ws_connect(ss.str(), false);
 			return;
 		} while (0);
@@ -356,7 +361,10 @@ namespace sio
 		}
 	}
 	*/
-	
+	void client_impl::onHttpResp(int code, const std::map<std::string, std::string>& resp)
+	{
+	}
+
     void client_impl::onOpen()
     {
         if (m_con_state == con_closing) {
@@ -424,7 +432,7 @@ namespace sio
 		m_packet_mgr.put_payload(std::string(buff, size));
 	}
 
-    void client_impl::on_handshake(message::ptr const& message)
+	void client_impl::on_handshake(message::ptr const& message)
     {
         if(message && message->get_flag() == message::flag_object)
         {

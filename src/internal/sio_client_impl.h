@@ -89,7 +89,7 @@ namespace sio
 		virtual void onOpen() override;
 		virtual void onClose(int reason) override;
 		virtual void onMessage(const char* buff, int size, bool bin) override;
-
+		virtual void onHttpResp(int code, const std::map<std::string, std::string>& resp) override;
 
 		uint32_t createTimer(int delay, TimerCB cb) override;
 		void cancelTimer(uint32_t timer) override;

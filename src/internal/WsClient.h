@@ -46,7 +46,7 @@ class WsInstance : public IWSClient {
 public:
 	WsInstance();
 	~WsInstance() {
-		Close("");
+		Close("Destroy");
 	}
 
 	void log(const char* fmt, ...);
@@ -60,7 +60,7 @@ public:
 
 	virtual int GetState();
 
-	virtual bool Open(const char* url);
+	virtual bool Open(const char* url, const std::map<std::string, std::string>& header);
 	virtual bool Close(const char* reason);
 	virtual bool Write(const void* buff, int size, bool bin);
 

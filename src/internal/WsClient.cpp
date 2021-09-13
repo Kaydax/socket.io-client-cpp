@@ -21,18 +21,17 @@ WsInstance<config>::WsInstance()
 	m_client.init_asio(io_service);
 
 	// Bind the clients we are using
-	/*
 	m_client.set_http_handler([this](connection_hdl con) {
 		lib::error_code ec;
 		typename client_type::connection_ptr conn_ptr = m_client.get_con_from_hdl(con, ec);
-		if (conn_ptr && m_http_listener) {
+		if (conn_ptr) {
 			auto resp = conn_ptr->get_response();
-			//std::cout << conn_ptr->get_response_header("token");
 			std::map<std::string, std::string> headers(resp.get_headers().begin(), resp.get_headers().end());
-			m_http_listener((int)resp.get_status_code(), headers, resp.get_body());
+			// m_http_listener((int)resp.get_status_code(), headers, resp.get_body());
+			if (event_)
+				event_->onHttpResp((int)resp.get_status_code(), headers);
 		}
 	});
-	*/
 	m_client.set_open_handler([this](connection_hdl con) {
 		opened_ = true;
 		if (event_)
@@ -51,7 +50,7 @@ WsInstance<config>::WsInstance()
 			code = conn_ptr->get_local_close_code();
 			log("sio close %s", close::status::get_string(code).c_str());
 		}
-
+		m_con.reset();
 		opened_ = false;
 		if (event_)
 			event_->onClose(code == close::status::normal);
@@ -59,6 +58,7 @@ WsInstance<config>::WsInstance()
 
 	m_client.set_fail_handler([this](connection_hdl con) {
 		opened_ = false;
+		m_con.reset();
 		if (event_)
 			event_->onClose(false);
 	});
@@ -110,9 +110,13 @@ int WsInstance<config>::GetState()
 }
 
 template <typename config>
-bool WsInstance<config>::Open(const char* url)
+bool WsInstance<config>::Open(const char* url, const std::map<std::string, std::string>& headers)
 {
 	std::string uri = url;
+	if (!m_con.expired()) {
+		log("already opened, skip open %s, please call close first", url);
+		return false;
+	}
 	io_service->dispatch([=]() {
 		lib::error_code ec;
 		typename client_type::connection_ptr con = m_client.get_connection(uri, ec);
@@ -120,12 +124,12 @@ bool WsInstance<config>::Open(const char* url)
 			log("get_connection %s Error: %s", uri.c_str(), ec.message().c_str());
 			return;// false;
 		}
-		/*
-		for (auto&& header : m_http_headers) {
+		for (auto&& header : headers) {
 			con->replace_header(header.first, header.second);
-		}*/
+		}
 		// con->set_http(http);
 		m_client.connect(con);
+		m_con = con;
 	});
 	return true;
 }
